@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Programmable Pixels</title>
+<meta name="description" content="Programmable Pixels — games, animations, music and live code. One operator, one feed.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   PROGRAMMABLE PIXELS — "the work is the interface"
+   Neutral ground, small utility tags, full-bleed media.
+   Rebrand: change the wordmark in <header> and --ink if needed.
+   ============================================================ */
+:root{
+  --ground:  #F6F6F4;
+  --ink:     #111111;
+  --grey:    #8C8C88;
+  --line:    #E3E3DF;
+  --media:   #0B0B0C;   /* media blocks sit dark inside the light page */
+  --font-display: "Univers Next", "Univers LT Std", "Univers", "Helvetica Neue", Helvetica, "Inter", Arial, sans-serif;
+  --font-body: "Helvetica Neue", Helvetica, "Inter", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+  --col: min(680px, 100%);
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html{ background:var(--ground); }
+body{
+  font-family:var(--font-body);
+  color:var(--ink);
+  background:var(--ground);
+  min-height:100vh;
+  display:flex; flex-direction:column; align-items:center;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---- header: wordmark, live dot, nothing else ---- */
+header{
+  width:var(--col);
+  padding:22px 20px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.wordmark{
+  font-family:var(--font-display);
+  font-size:clamp(20px, 5.6vw, 28px); font-weight:800; letter-spacing:-.025em;
+  text-transform:uppercase;
+}
+.live{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.08em;
+  color:var(--grey); display:flex; align-items:center; gap:6px;
+  text-transform:uppercase;
+}
+.live .dot{ width:6px; height:6px; border-radius:50%; background:var(--ink); animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.2} }
+
+/* ---- feed ---- */
+main{ width:var(--col); display:flex; flex-direction:column; }
+
+.post{ padding:26px 20px 34px; border-top:1px solid var(--line); }
+.tags{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.08em;
+  color:var(--grey); text-transform:uppercase;
+  display:flex; gap:14px; margin-bottom:10px; align-items:baseline;
+}
+.tags .cat{ color:var(--ink); font-weight:500; }
+.tags .date{ margin-left:auto; font-size:10px; }
+.post h2{ font-family:var(--font-display); font-size:21px; font-weight:700; letter-spacing:-.02em; }
+.post .media{ margin:14px 0 12px; }
+.post p{ color:#444; font-size:15.5px; line-height:1.65; max-width:56ch; }
+.post p + p{ margin-top:10px; }
+
+/* text-only posts read larger, like a statement */
+.post.is-text p{ font-size:17px; color:var(--ink); }
+
+/* media blocks */
+.frame{
+  width:100%; background:var(--media); border-radius:2px; overflow:hidden;
+  position:relative;
+}
+.frame.r45{ aspect-ratio:4/5; }
+.frame.r43{ aspect-ratio:4/3; }
+.frame.r43 canvas{ image-rendering:pixelated; }
+.frame.r169{ aspect-ratio:16/9; }
+.frame canvas{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+.frame .corner{
+  position:absolute; left:10px; bottom:8px;
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.08em;
+  color:rgba(255,255,255,.65); text-transform:uppercase; pointer-events:none;
+}
+.frame.is-slot{ display:flex; align-items:center; justify-content:center; }
+.art{
+  display:block; width:100%; height:auto;
+  background:var(--media); border-radius:2px;
+}
+.frame.is-slot span{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.1em;
+  color:rgba(255,255,255,.4); text-transform:uppercase;
+}
+#wgl{ cursor:crosshair; }
+
+/* minimal audio row */
+.audio{ display:flex; align-items:center; gap:16px; margin:14px 0 12px; }
+.playbtn{
+  width:52px; height:52px; border-radius:50%;
+  border:1px solid var(--ink); background:none; color:var(--ink);
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.06em;
+  text-transform:uppercase; cursor:pointer; flex-shrink:0;
+  transition:background .15s, color .15s;
+}
+.playbtn:hover, .playbtn:focus-visible{ background:var(--ink); color:var(--ground); }
+:focus-visible{ outline:2px solid var(--ink); outline-offset:2px; }
+.wave{ flex:1; height:36px; display:flex; align-items:center; gap:3px; }
+.wave span{ flex:1; height:2px; background:var(--line); transition:height .12s linear; }
+.audio.playing .wave span{ background:var(--ink); }
+
+/* links, plain and underlined */
+.plain{
+  color:var(--ink); font-size:15px; font-weight:500;
+  text-decoration:underline; text-underline-offset:3px;
+}
+.plain:hover{ color:var(--grey); }
+
+/* email: single underlined line */
+.lock{ display:flex; gap:10px; margin-top:14px; max-width:420px; }
+.lock input{
+  flex:1; min-width:0; background:none; color:var(--ink);
+  border:none; border-bottom:1px solid var(--ink);
+  padding:8px 0; font-family:var(--font-mono); font-size:13px;
+}
+.lock input::placeholder{ color:var(--grey); }
+.lock button{
+  background:none; border:none; cursor:pointer;
+  font-family:var(--font-mono); font-size:12px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--ink);
+  border-bottom:1px solid transparent;
+}
+.lock button:hover{ border-bottom-color:var(--ink); }
+.lock-msg{ margin-top:10px; font-family:var(--font-mono); font-size:12px; color:var(--grey); min-height:1em; }
+
+footer{
+  width:var(--col); padding:30px 20px 56px;
+  border-top:1px solid var(--line);
+  font-family:var(--font-mono); font-size:11px; color:var(--grey);
+  letter-spacing:.06em; line-height:2; text-transform:uppercase;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .live .dot{ animation:none; }
+  .wave span{ transition:none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">Programmable Pixels</div>
+  <div class="live"><span class="dot"></span>Live</div>
+</header>
+
+<main id="feed"></main>
+
+<footer>
+  Programmable Pixels — one operator<br>
+  © <span id="yr"></span>
+</footer>
+
+<script>
+/* ============================================================
+   THE FEED IS A LIST. Publish = append one object.
+   Newest first on screen; catalogue numbers are permanent.
+
+   CATALOGUE RULES (Factory style):
+   - Every entry gets the next hex number: PP-001 ... PP-00A ... PP-0FF
+   - Numbers are NEVER reused or renumbered, even if a piece is pulled.
+   - Everything gets a number: works, the site itself, the mailing list.
+   - `date` is the day it entered the catalogue. Both are immutable.
+   ============================================================ */
+const POSTS = [
+  { cat:"PP-006", date:"2026-08-14", type:"webgl", title:"Dustfield", tags:["Live","WebGL"], note:"tap to disturb" },
+  { cat:"PP-005", date:"2026-08-14", type:"cracktro", title:"Loader", tags:["Demo","ASCII"], note:"tap to change the copper" },
+  { cat:"PP-001", date:"2026-08-14", type:"text",  title:"What this is", tags:["Log"],
+    body:["One feed, one operator. No algorithm, no comments — just work, newest first.",
+          "Everything here has a catalogue number. PP-001 is this site itself.",
+          "Novels became a game. The game is becoming animations. Everything lands here first."] },
+  { cat:"PP-004", date:"2026-08-14", type:"music", title:"Belt Ambient 01", tags:["Audio","Generative"],
+    body:["Never plays the same way twice."] },
+  { cat:"PP-003", date:"2026-08-14", type:"game",  title:"BeltMiner", tags:["Game","Python"],
+    body:["A mining game set in the world of the novels."], href:"#", cta:"Get the game" },
+  { cat:"PP-007", date:"2026-08-14", type:"video", title:"First animation", tags:["Film"],
+    body:["The first animated piece from the novels docks here."] },
+  { cat:"PP-002", date:"2026-08-14", type:"lock",  title:"Follow the feed", tags:["Subscribe"],
+    body:["Leave an address, get one line when something new lands."] },
+];
+
+const tagRow = p => `<div class="tags"><span class="cat">${p.cat}</span>${
+  p.tags.map(x=>`<span>${x}</span>`).join("")
+}<span class="date">${p.date}</span></div>`;
+
+const R = {
+  webgl:(p)=>`<article class="post">${tagRow(p)}<h2>${p.title}</h2>
+    <div class="media"><div class="frame r45" id="wgl"><canvas id="wglc"></canvas>
+    <div class="corner">${p.note}</div></div></div></article>`,
+  cracktro:(p)=>`<article class="post">${tagRow(p)}<h2>${p.title}</h2>
+    <div class="media"><div class="frame r43" id="ctro"><canvas id="ctroc"></canvas>
+    <div class="corner">${p.note}</div></div></div></article>`,
+  text:(p)=>`<article class="post is-text">${tagRow(p)}<h2>${p.title}</h2>
+    <div style="height:10px"></div>${p.body.map(t=>`<p>${t}</p>`).join("")}</article>`,
+  music:(p)=>`<article class="post">${tagRow(p)}<h2>${p.title}</h2>
+    <div class="audio" id="deck"><button class="playbtn" id="playbtn" aria-pressed="false">Play</button>
+    <div class="wave" aria-hidden="true">${"<span></span>".repeat(28)}</div></div>
+    ${p.body.map(t=>`<p>${t}</p>`).join("")}</article>`,
+  game:(p)=>`<article class="post">${tagRow(p)}<h2>${p.title}</h2>
+    <div style="height:8px"></div>${p.body.map(t=>`<p>${t}</p>`).join("")}
+    <p style="margin-top:12px"><a class="plain" href="${p.href}">${p.cta}</a></p></article>`,
+  image:(p)=>`<article class="post">${tagRow(p)}<h2>${p.title}</h2>
+    <div class="media"><img class="art" src="${p.src}" alt="${p.alt||p.title}" loading="lazy"></div>
+    ${(p.body||[]).map(t=>`<p>${t}</p>`).join("")}</article>`,
+  video:(p)=> p.src
+    ? `<article class="post">${tagRow(p)}<h2>${p.title}</h2>
+      <div class="media"><video class="art" src="${p.src}" ${p.poster?`poster="${p.poster}"`:""}
+      controls playsinline preload="metadata" ${p.loop?"loop muted autoplay":""}></video></div>
+      ${(p.body||[]).map(t=>`<p>${t}</p>`).join("")}</article>`
+    : `<article class="post">${tagRow(p)}<h2>${p.title}</h2>
+      <div class="media"><div class="frame r169 is-slot"><span>Slot reserved</span></div></div>
+      ${(p.body||[]).map(t=>`<p>${t}</p>`).join("")}</article>`,
+  lock:(p)=>`<article class="post">${tagRow(p)}<h2>${p.title}</h2>
+    <div style="height:8px"></div>${p.body.map(t=>`<p>${t}</p>`).join("")}
+    <form class="lock" id="lockform"><input type="email" required placeholder="you@somewhere.net" aria-label="Email address">
+    <button type="submit">Follow</button></form><div class="lock-msg" id="lockmsg"></div></article>`,
+};
+document.getElementById("feed").innerHTML = POSTS.map(p=>R[p.type](p)).join("");
+document.getElementById("yr").textContent = new Date().getFullYear();
+
+/* ============================================================
+   DUSTFIELD — WebGL fragment shader, tap-reactive
+   ============================================================ */
+(function(){
+  const cv = document.getElementById("wglc"), wrap = document.getElementById("wgl");
+  const gl = cv.getContext("webgl");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(!gl){ wrap.querySelector(".corner").textContent = "webgl unavailable"; return; }
+
+  const vs = `attribute vec2 p; void main(){ gl_Position = vec4(p,0.,1.); }`;
+  const fs = `
+  precision mediump float;
+  uniform vec2 u_res; uniform float u_t; uniform vec3 u_click;
+  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+  float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+    return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y); }
+  float fbm(vec2 p){ float v=0., a=.5; for(int k=0;k<5;k++){ v+=a*noise(p); p*=2.03; a*=.5; } return v; }
+  void main(){
+    vec2 uv = (gl_FragCoord.xy - .5*u_res)/u_res.y;
+    float t = u_t*.05;
+    float d = length(uv - u_click.xy);
+    float age = u_t - u_click.z;
+    float wave = exp(-3.*age) * sin(18.*d - 7.*age) * smoothstep(1.2, 0., d);
+    uv += normalize(uv - u_click.xy + 1e-4) * wave * .05;
+    float n = fbm(uv*2.4 + vec2(t, -t*.6));
+    n += .35*fbm(uv*6. - vec2(t*1.7, 0.));
+    // monochrome dust: silver on black, quiet
+    vec3 dust = mix(vec3(.015), vec3(.55,.56,.58), smoothstep(.5,1.02,n));
+    vec2 sp = uv*u_res.y*.045 + vec2(t*4., 0.);
+    float s = step(.997, hash(floor(sp))) * fract(sin(u_t + hash(floor(sp))*99.)*.5+.5);
+    vec2 sp2 = uv*u_res.y*.09 + vec2(t*9., 0.);
+    float s2 = step(.9985, hash(floor(sp2)));
+    vec3 col = dust + (s*.95 + s2*.6)*vec3(1.);
+    col += vec3(1.) * max(wave,0.) * .5;
+    col *= 1. - .5*dot(uv,uv);
+    gl_FragColor = vec4(col,1.);
+  }`;
+  function sh(type,src){ const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s); return s; }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER,vs));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER,fs));
+  gl.linkProgram(prog); gl.useProgram(prog);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog,"p");
+  gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+  const uRes = gl.getUniformLocation(prog,"u_res"),
+        uT   = gl.getUniformLocation(prog,"u_t"),
+        uC   = gl.getUniformLocation(prog,"u_click");
+  let click = [10,10,-99], t0 = performance.now();
+
+  function size(){
+    const dpr = Math.min(devicePixelRatio||1, 2), r = wrap.getBoundingClientRect();
+    cv.width = r.width*dpr; cv.height = r.height*dpr;
+    gl.viewport(0,0,cv.width,cv.height);
+  }
+  size(); addEventListener("resize", size);
+
+  wrap.addEventListener("pointerdown", e=>{
+    const r = wrap.getBoundingClientRect();
+    const x = ((e.clientX-r.left)/r.width  - .5) * (r.width/r.height);
+    const y = -((e.clientY-r.top)/r.height - .5);
+    click = [x, y, (performance.now()-t0)/1000];
+  });
+
+  function draw(){
+    const t = (performance.now()-t0)/1000;
+    gl.uniform2f(uRes, cv.width, cv.height);
+    gl.uniform1f(uT, reduced ? 0 : t);
+    gl.uniform3f(uC, click[0], click[1], click[2]);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ============================================================
+   LOADER — original cracktro homage (ST/Amiga era style).
+   Low-res 2D canvas, upscaled pixelated. Tap cycles the copper.
+   ============================================================ */
+(function(){
+  const cv = document.getElementById("ctroc"), wrap = document.getElementById("ctro");
+  if(!cv) return;
+  const ctx2 = cv.getContext("2d");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const W = 320, H = 240;                     // authentic low resolution
+  cv.width = W; cv.height = H;
+
+  const SCROLL = "   +++ PROGRAMMABLE PIXELS PRESENTS ... BELTMINER +++ " +
+    "NO CRACK NEEDED - IT WAS FREE ALL ALONG +++ CODE, GFX AND MUSIC BY ONE OPERATOR +++ " +
+    "GREETINGS FLY OUT TO THE BELT ... AND TO EVERYONE STILL READING SINE SCROLLERS IN " +
+    (new Date().getFullYear()) + " +++ PRESS PLAY ON TAPE +++      ";
+
+  // copper palettes — tap to cycle
+  const PALETTES = [
+    ["#1a0533","#7b2ff7","#f107a3","#ffb3f6"],
+    ["#001b2e","#0f7bd4","#5fd0ff","#dff6ff"],
+    ["#1c1c1c","#4d4d4d","#bfbfbf","#ffffff"],   // house monochrome
+    ["#2b1a00","#c96f00","#ffc400","#fff2b3"],
+  ];
+  let pal = 0;
+  wrap.addEventListener("pointerdown", ()=>{ pal = (pal+1) % PALETTES.length; });
+
+  let t = 0;
+  function draw(){
+    const P = PALETTES[pal];
+    ctx2.fillStyle = "#000"; ctx2.fillRect(0,0,W,H);
+
+    // copper bars: horizontal raster gradients breathing up and down
+    for(let i=0; i<5; i++){
+      const cy = H*0.5 + Math.sin(t*.02 + i*1.2)*70;
+      for(let r=-10; r<=10; r++){
+        const shade = P[Math.max(0, 3 - Math.floor(Math.abs(r)/3.4))];
+        ctx2.fillStyle = shade;
+        ctx2.globalAlpha = .5;
+        ctx2.fillRect(0, cy+r, W, 1);
+      }
+    }
+    ctx2.globalAlpha = 1;
+
+    // ASCII block logo: "PP!" built from characters — the pixels ARE text
+    ctx2.font = "10px monospace";
+    ctx2.textBaseline = "top";
+    const LOGO = [
+      "  ___   ___    _ ",
+      " | _ \\ | _ \\  | |",
+      " |  _/ |  _/  |_|",
+      " |_|   |_|    (_)",
+    ];
+    const ly = 28 + (reduced ? 0 : Math.sin(t*.03)*6);
+    LOGO.forEach((row,i)=>{
+      ctx2.fillStyle = "#000"; ctx2.fillText(row, 111, ly + i*11 + 1);
+      ctx2.fillStyle = P[3];   ctx2.fillText(row, 110, ly + i*11);
+    });
+    ctx2.fillStyle = P[2];
+    ctx2.font = "8px monospace";
+    ctx2.fillText("P R O G R A M M A B L E   P I X E L S", 62, ly + 50);
+
+    // sine scroller along the bottom, letter by letter
+    ctx2.font = "bold 14px monospace";
+    const speed = reduced ? 0 : 1.6;
+    const off = Math.floor(t*speed);
+    for(let i=0; i<28; i++){
+      const ch = SCROLL[(Math.floor(off/9) + i) % SCROLL.length];
+      const x = i*12 - (off % 9);
+      const y = 190 + (reduced ? 0 : Math.sin((t*.06) + i*.55)*14);
+      ctx2.fillStyle = "#000"; ctx2.fillText(ch, x+1, y+1);
+      ctx2.fillStyle = P[3];   ctx2.fillText(ch, x, y);
+    }
+
+    // scanlines
+    ctx2.fillStyle = "rgba(0,0,0,.25)";
+    for(let y=0; y<H; y+=2) ctx2.fillRect(0,y,W,1);
+
+    t++;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ============================================================
+   BELT AMBIENT 01 — generative Web Audio
+   ============================================================ */
+(function(){
+  const btn = document.getElementById("playbtn"),
+        deck = document.getElementById("deck"),
+        bars = deck.querySelectorAll(".wave span");
+  let ctx, master, timer = null, vuTimer = null;
+  const scale = [0, 3, 5, 7, 10, 12, 15];
+  const base = 110;
+
+  function boot(){
+    ctx = new (window.AudioContext||window.webkitAudioContext)();
+    master = ctx.createGain(); master.gain.value = .5;
+    const lp = ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value = 1800;
+    master.connect(lp).connect(ctx.destination);
+    [0, 4].forEach(det=>{
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type="sawtooth"; o.frequency.value = base/2; o.detune.value = det;
+      g.gain.value = .05; o.connect(g).connect(master); o.start();
+    });
+  }
+  function pluck(){
+    const st = scale[Math.floor(Math.random()*scale.length)];
+    const oct = Math.random() < .3 ? 2 : 1;
+    const f = base * Math.pow(2, st/12) * oct;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "triangle"; o.frequency.value = f;
+    const now = ctx.currentTime;
+    g.gain.setValueAtTime(.0001, now);
+    g.gain.exponentialRampToValueAtTime(.22, now+.02);
+    g.gain.exponentialRampToValueAtTime(.0001, now+1.4);
+    o.connect(g).connect(master); o.start(now); o.stop(now+1.5);
+  }
+  function start(){
+    if(!ctx) boot();
+    ctx.resume();
+    timer = setInterval(()=>{ if(Math.random()<.75) pluck(); }, 480);
+    vuTimer = setInterval(()=>bars.forEach(b=>b.style.height = (2+Math.random()*30)+"px"), 130);
+    deck.classList.add("playing");
+    btn.textContent = "Stop"; btn.setAttribute("aria-pressed","true");
+  }
+  function stop(){
+    clearInterval(timer); clearInterval(vuTimer); timer = null;
+    if(ctx) ctx.suspend();
+    bars.forEach(b=>b.style.height = "2px");
+    deck.classList.remove("playing");
+    btn.textContent = "Play"; btn.setAttribute("aria-pressed","false");
+  }
+  btn.addEventListener("click", ()=> timer ? stop() : start());
+})();
+
+/* Email — front-end only. Wire to Buttondown / Formspree later. */
+document.getElementById("lockform").addEventListener("submit", e=>{
+  e.preventDefault();
+  document.getElementById("lockmsg").textContent = "Noted — mail service not wired yet.";
+});
+</script>
+</body>
+</html>
