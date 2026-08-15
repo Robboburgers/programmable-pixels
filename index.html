@@ -1005,104 +1005,19 @@ document.getElementById("feed").innerHTML = POSTS.map(p=>R[p.type](p)).join("");
 document.getElementById("yr").textContent = new Date().getFullYear();
 
 /* ============================================================
-   GIZMO PLAYER — compiles do_pixel expressions into live
-   per-pixel canvases with parameter sliders.
-   Each gizmo is its own tiny shader, running on a 2D canvas.
+   GIZMO PLAYER — every catalogue gizmo runs through the reader.
+   The site is one instance of the reader: reader.js owns the
+   maths (compile, built-ins, fixed-seed noise, per-tick cache);
+   this block owns appearance only — canvas, sliders, visibility.
+   Each gizmo keeps its own frame counter, paused offscreen.
    ============================================================ */
 (function(){
+  if (typeof Reader === "undefined") return;
   const SIZE = 256;
   const gizmos = POSTS.filter(p => p.type === "gizmo");
   if (!gizmos.length) return;
-
-  /* --- Simplex-style 2D noise (compact, self-contained) --- */
-  const perm = new Uint8Array(512);
-  (function(){ const p=[]; for(let i=0;i<256;i++) p[i]=i;
-    for(let i=255;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [p[i],p[j]]=[p[j],p[i]]; }
-    for(let i=0;i<512;i++) perm[i]=p[i&255];
-  })();
-  function grad2(h,x,y){ const u=h<4?x:y, v=h<4?y:x; return((h&1)?-u:u)+((h&2)?-v:v); }
-  function noise2(x,y){
-    const X=Math.floor(x)&255, Y=Math.floor(y)&255;
-    x-=Math.floor(x); y-=Math.floor(y);
-    const u=x*x*x*(x*(x*6-15)+10), v=y*y*y*(y*(y*6-15)+10);
-    const a=perm[X]+Y, b=perm[X+1]+Y;
-    return .5+.5*(
-      (1-v)*((1-u)*grad2(perm[a]&15,x,y)+u*grad2(perm[b]&15,x-1,y))
-      +v*((1-u)*grad2(perm[a+1]&15,x,y-1)+u*grad2(perm[b+1]&15,x-1,y-1))
-    );
-  }
-
-  /* --- do_pixel compiler --- */
-  const {sin,cos,sqrt,abs,atan2,PI,floor,ceil,min,max,pow,exp,log} = Math;
-  function clamp(v,lo,hi){ return v<lo?lo:v>hi?hi:v; }
-  function smoothstep(e0,e1,x){ const t=clamp((x-e0)/(e1-e0),0,1); return t*t*(3-2*t); }
-  function fmod(a,b){ return a - b * Math.floor(a/b); }
-
-  /* tan, acos, round — standard Math, just not injected yet */
-  const {tan, acos, round} = Math;
-
-  /* turbulence2 — sum of absolute-value noise octaves (fBM with abs) */
-  function turbulence2(x, y, oct) {
-    oct = oct || 4;
-    var val = 0, amp = 1, freq = 1, total = 0;
-    for(var i = 0; i < oct; i++) {
-      val += amp * abs(noise2(x * freq, y * freq) * 2 - 1);
-      total += amp;
-      amp *= 0.5;
-      freq *= 2;
-    }
-    return val / total;
-  }
-
-  /* voronoi2 — Worley cellular noise, returns distance to nearest point */
-  function voronoi2(x, y) {
-    var ix = floor(x), iy = floor(y);
-    var fx = x - ix, fy = y - iy;
-    var md = 8.0;
-    for(var j = -1; j <= 1; j++) {
-      for(var i = -1; i <= 1; i++) {
-        var ox = i + fract((sin((ix+i)*127.1 + (iy+j)*311.7) * 43758.5453)) - fx;
-        var oy = j + fract((sin((ix+i)*269.5 + (iy+j)*183.3) * 43758.5453)) - fy;
-        var d = ox*ox + oy*oy;
-        if(d < md) md = d;
-      }
-    }
-    return sqrt(md);
-  }
-  function fract(x) { return x - floor(x); }
-
-  /* cellnoise2 — integer-lattice hash noise (one random value per cell) */
-  function cellnoise2(x, y) {
-    var ix = floor(x), iy = floor(y);
-    return fract(sin(ix * 127.1 + iy * 311.7) * 43758.5453);
-  }
-
-  function compile(src, paramNames){
-    const stmts = src.split(";").map(s=>s.trim()).filter(Boolean);
-    const body = [];
-    for(let i=0;i<stmts.length-1;i++){
-      const eq = stmts[i].indexOf("=");
-      if(eq>0 && !/[=!<>]/.test(stmts[i][eq-1]) && stmts[i][eq+1]!=="="){
-        body.push("var "+stmts[i]);
-      } else {
-        body.push(stmts[i]);
-      }
-    }
-    body.push("return ("+stmts[stmts.length-1]+");");
-    const args = ["x","y","t","noise2","sin","cos","sqrt","abs","atan2","PI",
-                  "floor","ceil","min","max","pow","exp","log",
-                  "clamp","smoothstep","fmod",
-                  "tan","acos","round","turbulence2","voronoi2","cellnoise2","fract"].concat(paramNames);
-    try {
-      return new Function(...args, body.join("\n"));
-    } catch(e){
-      console.warn("Gizmo compile error:", e);
-      return function(){ return 0; };
-    }
-  }
-
-  /* --- Bootstrap each gizmo --- */
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reader = Reader.createReader();
 
   gizmos.forEach(p => {
     const id = p.cat.toLowerCase().replace("-","");
@@ -1113,45 +1028,30 @@ document.getElementById("yr").textContent = new Date().getFullYear();
     const img = ctx2.createImageData(SIZE, SIZE);
     const buf = img.data;
 
-    const paramNames = p.params ? Object.keys(p.params) : [];
-    let fn;
-    try { fn = compile(p.do_pixel, paramNames); } catch(e){ return; }
+    try { reader.fromPost(id, p); }
+    catch(e){ console.warn(p.cat, "did not instantiate:", e); return; }
 
-    /* live param values */
-    const paramValues = {};
-    if (p.params) {
-      for (const [k,v] of Object.entries(p.params)) paramValues[k] = v.value;
-    }
-
-    /* wire sliders */
+    /* sliders steer params through the reader */
     const panel = document.querySelector(`.gizmo-panel[data-gizmo="${id}"]`);
     if (panel) {
       panel.querySelectorAll("input[type=range]").forEach(inp => {
-        const key = inp.dataset.param;
-        const valSpan = inp.nextElementSibling;
         inp.addEventListener("input", () => {
-          paramValues[key] = parseFloat(inp.value);
+          reader.setParam(id, inp.dataset.param, parseFloat(inp.value));
+          const valSpan = inp.nextElementSibling;
           if (valSpan) valSpan.textContent = parseFloat(inp.value).toFixed(2);
         });
       });
     }
 
-    /* --- render loop (IntersectionObserver gated) --- */
     let running = false, t = 0;
     function render(){
       if (!running) return;
-      const pArr = paramNames.map(k => paramValues[k]);
+      const field = reader.pull(id, t);
       for(let py=0; py<SIZE; py++){
         const ny = py / SIZE;
         for(let px=0; px<SIZE; px++){
-          const nx = px / SIZE;
-          let v = fn(nx, ny, t, noise2,
-            sin, cos, sqrt, abs, atan2, PI,
-            floor, ceil, min, max, pow, exp, log,
-            clamp, smoothstep, fmod,
-            tan, acos, round, turbulence2, voronoi2, cellnoise2, fract,
-            ...pArr);
-          v = clamp(v, 0, 1);
+          let v = field(px / SIZE, ny);
+          v = v<0?0:v>1?1:v;
           const c = (v * 255) | 0;
           const i = (py * SIZE + px) * 4;
           buf[i] = c; buf[i+1] = c; buf[i+2] = c; buf[i+3] = 255;
@@ -1161,7 +1061,6 @@ document.getElementById("yr").textContent = new Date().getFullYear();
       if (!reduced) t += 1;
       requestAnimationFrame(render);
     }
-
     const obs = new IntersectionObserver(entries => {
       entries.forEach(e => {
         if (e.isIntersecting && !running) { running = true; render(); }
