@@ -251,7 +251,29 @@
       if (node) { node.inputValues[name] = v; node.cacheT = null; }
     }
 
-    return { instantiate, fromPost, connect, pull, setParam, setInput, nodes, wires };
+    /* hot-reload: replace a loaded gizmo's definition at runtime without
+       restarting the graph. Wires survive — they bind to the id, not the
+       node. Current param values and static inputs carry over where the
+       names still exist. A bad body throws and the old node stays. */
+    function reload(id, def) {
+      const old = nodes.get(id);
+      let node;
+      try {
+        node = instantiate(id, def);
+      } catch (e) {
+        if (old) nodes.set(id, old);
+        throw e;
+      }
+      if (old) {
+        for (const k of node.paramNames)
+          if (k in old.values) node.values[k] = old.values[k];
+        for (const k in old.inputValues)
+          node.inputValues[k] = old.inputValues[k];
+      }
+      return node;
+    }
+
+    return { instantiate, fromPost, connect, pull, setParam, setInput, reload, nodes, wires };
   }
 
   const api = { createReader, compile, BUILTINS, BUILTIN_NAMES, noise2 };
