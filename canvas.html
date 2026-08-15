@@ -10,10 +10,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   PROGRAMMABLE PIXELS — the canvas: nested squares.
-   The catalogue laid out as a quadtree; one reader ticks it all.
-   Sage ground, black ink, hairline grid. The player shows what
-   the selected cell returns; escape returns to the root.
+   PROGRAMMABLE PIXELS — the canvas: a workspace of nested squares.
+   Gizmos are added from the catalogue menu, wired port to port,
+   and the whole graph is one reader ticking. Sage ground, black
+   ink, hairline grid. The player shows what the selected cell
+   returns; escape returns to the root. The canvas serialises to
+   local storage on every change and downloads as a Container.
    ============================================================ */
 :root{
   --ground:  #F6F6F4;
@@ -64,13 +66,35 @@ header{
 .live .dot{ width:6px; height:6px; border-radius:50%; background:var(--ink); animation:pulse 2s ease-in-out infinite; }
 @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.2} }
 
-/* ---- the plane and the player, side by side; stacked when narrow ---- */
+/* ---- menu, plane and player, side by side; stacked when narrow ---- */
 main{
   width:var(--col); padding:0 20px 40px;
   display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;
 }
+.menu{
+  flex:0 1 230px; min-width:200px; max-width:280px;
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.04em;
+}
+.menu .m-title{
+  font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--grey);
+  margin-bottom:8px;
+}
+.menu input{
+  width:100%; font:inherit; color:var(--ink); background:none;
+  border:none; border-bottom:1px solid var(--line); border-radius:0;
+  padding:4px 0 6px; outline:none; margin-bottom:8px;
+}
+.menu .m-list{ max-height:64vh; overflow-y:auto; display:flex; flex-direction:column; align-items:flex-start; }
+.menu .m-row{
+  font:inherit; text-align:left; background:none; border:none; cursor:pointer;
+  color:var(--grey); padding:2px 0; letter-spacing:.02em; line-height:1.5;
+}
+.menu .m-row:hover{ color:var(--ink); }
+.menu .m-foot{ margin-top:12px; color:var(--grey); line-height:1.8; }
+.menu .m-foot a{ color:var(--grey); text-decoration:none; border-bottom:1px solid var(--line); }
+.menu .m-foot a:hover{ color:var(--ink); border-color:var(--ink); }
 .plane-wrap{
-  flex:1 1 520px; min-width:min(520px, 100%);
+  flex:1 1 440px; min-width:min(440px, 100%);
   display:flex; justify-content:center;
 }
 #plane{
@@ -133,6 +157,15 @@ footer{
 </header>
 
 <main>
+  <aside class="menu">
+    <div class="m-title">Catalogue</div>
+    <input id="mfilter" type="search" placeholder="filter — name, label, class" aria-label="Filter the catalogue">
+    <div class="m-list" id="mlist"></div>
+    <div class="m-foot">
+      <a href="#" id="mdl">download container</a><br>
+      <a href="#" id="mclear">clear canvas</a>
+    </div>
+  </aside>
   <div class="plane-wrap"><canvas id="plane"></canvas></div>
   <aside class="player">
     <div class="p-title">Player</div>
@@ -151,37 +184,28 @@ footer{
 <script src="reader.js"></script>
 <script>
 /* ============================================================
-   THE CANVAS IS THE CATALOGUE AS ONE SQUARE.
-   Layout is a quadtree: a cell holds one gizmo or splits into
-   four. Every cell is live — one reader, one shared t. Wires are
-   adjacency, not lines. The player is a Sink: it accepts every
-   type and picks the rendering.
+   THE CANVAS IS A WORKSPACE.
+   One reader owns one graph; the canvas is a view onto it. A cell
+   is a reference to a node in that graph. Gizmos are added from
+   the catalogue menu, their ports sit on the cell edges, and a
+   click on an output then an input makes a wire in the reader —
+   the target pulls from the source each tick. The graph writes to
+   local storage on every change and downloads as a Container.
    ============================================================ */
 (async function(){
   if (typeof Reader === "undefined") return;
 
   const cat = await fetch("catalogue.json").then(r => r.json());
-  const gizmos = cat.gizmos.slice();
+  const byLabel = new Map(cat.gizmos.map(g => [g.label, g]));
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const reader = Reader.createReader();
-
-  /* ---- one node per catalogue entry; the label is the id ---- */
-  const nodes = new Map(); // id -> {g, id, kind}
-  for (const g of gizmos) {
-    const id = g.label.toLowerCase().replace(/-/g, "");
-    try {
-      reader.instantiate(id, g);
-      nodes.set(id, { g, id, kind: cellKind(g) });
-    } catch (e) {
-      console.warn(g.label, "did not instantiate:", e);
-      nodes.set(id, { g, id, kind: "card" });
-    }
-  }
-  const items = gizmos.map(g => nodes.get(g.label.toLowerCase().replace(/-/g, "")));
+  const idOf = label => label.toLowerCase().replace(/-/g, "");
+  const TYPE_OK = (from, to) =>
+    from === to || (to === "visual" && (from === "field" || from === "particles"));
 
   /* How a cell shows itself. Generators with a field render it;
-     self-ticking float sources draw a hairline; unwired Transforms
-     are their label and ports in mono. */
+     self-ticking float sources draw a hairline; anything else is
+     its name in mono, ports on the edges. */
   function cellKind(g){
     const outs = (g.ports && g.ports.out) || [];
     if (g.class === "Generator" && outs.some(p => p.type === "field" || p.type === "visual")) return "field";
@@ -189,54 +213,140 @@ footer{
     return "card";
   }
 
-  /* ---- deterministic quadtree: same catalogue, same picture ---- */
-  function hash(s){
-    let h = 2166136261;
-    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-    return (h >>> 0) / 4294967296;
-  }
-  function buildTree(list, path, depth){
-    if (!list.length) return { empty: true };
-    if (list.length === 1) return { item: list[0] };
-    const n = list.length, counts = [0, 0, 0, 0];
-    /* hash-permuted quadrant order so big cells and empty ground
-       scatter instead of always settling bottom-right */
-    const order = [0, 1, 2, 3];
-    for (let i = 3; i > 0; i--) {
-      const j = Math.floor(hash(path + "s" + i) * (i + 1));
-      const tmp = order[i]; order[i] = order[j]; order[j] = tmp;
-    }
-    if (depth < 6 && n >= 6 && hash(path + "?") < 0.55) {
-      /* one quadrant stays whole — a big cell; density is depth */
-      counts[order[0]] = 1;
-      const rest = n - 1;
-      for (let k = 1; k < 4; k++) counts[order[k]] = Math.floor(rest / 3) + (k - 1 < rest % 3 ? 1 : 0);
-    } else {
-      for (let k = 0; k < 4; k++) counts[order[k]] = Math.floor(n / 4) + (k < n % 4 ? 1 : 0);
-    }
-    const kids = []; let off = 0;
-    for (let q = 0; q < 4; q++) { kids.push(buildTree(list.slice(off, off + counts[q]), path + q, depth + 1)); off += counts[q]; }
-    return { kids };
-  }
-  const tree = buildTree(items, "pp", 0);
+  /* ---- state: a tree of cells plus the reader's wires.
+     A node is {} (free ground), {label} (a gizmo) or {kids:[4]}.
+     localStorage is the store; every change writes it back. ---- */
+  const LSKEY = "pp-canvas-v1";
+  let tree = {};
+  const placed = new Map(); // id -> {g, id, kind}
 
-  /* ---- geometry: walk the tree, place leaves ---- */
+  function instantiateLabel(label){
+    const g = byLabel.get(label);
+    if (!g) return null;
+    const id = idOf(label);
+    if (placed.has(id)) return placed.get(id);
+    try {
+      reader.instantiate(id, g);
+      placed.set(id, { g, id, kind: cellKind(g) });
+    } catch (e) {
+      console.warn(label, "did not instantiate:", e);
+      placed.set(id, { g, id, kind: "card" });
+    }
+    return placed.get(id);
+  }
+  function walkLabels(nd, fn){
+    if (!nd) return;
+    if (nd.kids) nd.kids.forEach(k => walkLabels(k, fn));
+    else if (nd.label) fn(nd.label);
+  }
+  function save(){
+    try {
+      localStorage.setItem(LSKEY, JSON.stringify({
+        tree,
+        wires: reader.wires.map(w => ({ fromId: w.fromId, fromPort: w.fromPort, toId: w.toId, toPort: w.toPort }))
+      }));
+    } catch (e) {}
+    if (!target) showRoot(); // keep the root head's counts honest
+  }
+  function prune(nd){
+    if (!nd || typeof nd !== "object") return {};
+    if (Array.isArray(nd.kids) && nd.kids.length === 4) return { kids: nd.kids.map(prune) };
+    if (typeof nd.label === "string" && byLabel.has(nd.label)) return { label: nd.label };
+    return {};
+  }
+  function load(){
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(LSKEY) || "null"); } catch (e) {}
+    if (!s || !s.tree) return;
+    tree = prune(s.tree);
+    walkLabels(tree, label => instantiateLabel(label));
+    for (const w of (s.wires || [])) {
+      try { reader.connect(w.fromId, w.fromPort, w.toId, w.toPort); } catch (e) {}
+    }
+  }
+
+  /* ---- adding: the smallest free cell takes it; when nothing is
+     free, the largest occupied cell splits into four ---- */
+  function leavesOf(nd, x, y, w, out){
+    if (nd.kids) {
+      const h = w / 2;
+      leavesOf(nd.kids[0], x, y, h, out);      leavesOf(nd.kids[1], x + h, y, h, out);
+      leavesOf(nd.kids[2], x, y + h, h, out);  leavesOf(nd.kids[3], x + h, y + h, h, out);
+      return out;
+    }
+    out.push({ nd, x, y, w });
+    return out;
+  }
+  function addGizmo(label){
+    const g = byLabel.get(label);
+    if (!g) return;
+    let already = false;
+    walkLabels(tree, l => { if (l === label) already = true; });
+    if (already) { flash(label + " is already on the canvas"); return; }
+    instantiateLabel(label);
+    const cells = leavesOf(tree, 0, 0, 1, []);
+    const free = cells.filter(c => !c.nd.label);
+    if (free.length) {
+      free.sort((a, b) => a.w - b.w);
+      free[0].nd.label = label;
+    } else {
+      const occ = cells.filter(c => c.nd.label).sort((a, b) => b.w - a.w)[0];
+      const old = occ.nd.label;
+      delete occ.nd.label;
+      occ.nd.kids = [{ label: old }, { label: label }, {}, {}];
+    }
+    save();
+    relayout();
+  }
+
+  /* ---- geometry: walk the tree, place leaves and their ports ---- */
   const plane = document.getElementById("plane");
   const pctx = plane.getContext("2d");
   let leaves = [], side = 0, dpr = 1;
+  let portHits = [];         // {x, y, w, h, nodeId, port, type, dir, leaf}
+  const portPos = new Map(); // "id/dir/port" -> {x, y}
 
-  function placeLeaves(){
+  function insOf(g){
+    const decl = (g.ports && g.ports.in) || [];
+    const have = new Set(decl.map(p => p.name));
+    const extra = Object.keys(g.params || {})
+      .filter(k => !have.has(k))
+      .map(k => ({ name: k, type: "float" })); // params double as float in-ports
+    return decl.concat(extra);
+  }
+  function outsOf(g){ return (g.ports && g.ports.out) || []; }
+
+  /* Ports sit on the cell edge: ins left, outs right, mono labels
+     with the type. Not hidden behind a click. Markers are inset a
+     step so two cells sharing an edge keep their ports apart. */
+  function placePorts(leaf){
+    const g = leaf.item.g, id = leaf.item.id;
+    const sets = [
+      { list: insOf(g),  dir: "in",  x: leaf.x + 5 * dpr },
+      { list: outsOf(g), dir: "out", x: leaf.x + leaf.w - 5 * dpr }
+    ];
+    for (const s of sets) {
+      const top = leaf.y + 14 * dpr, room = Math.max(0, leaf.w - 24 * dpr);
+      const fits = Math.max(1, Math.floor(room / (11 * dpr)) + 1);
+      const shown = s.list.slice(0, fits);
+      const step = shown.length > 1 ? Math.min(15 * dpr, room / (shown.length - 1)) : 0;
+      shown.forEach((p, i) => {
+        const y = top + i * step;
+        portPos.set(id + "/" + s.dir + "/" + p.name, { x: s.x, y: y });
+        portHits.push({ x: s.x - 6 * dpr, y: y - 6 * dpr, w: 12 * dpr, h: 12 * dpr,
+                        nodeId: id, port: p.name, type: p.type, dir: s.dir, leaf: leaf });
+      });
+    }
+  }
+  function relayout(){
     leaves = [];
-    (function walk(nd, x, y, w){
-      if (nd.kids) {
-        const h = w / 2;
-        walk(nd.kids[0], x, y, h);      walk(nd.kids[1], x + h, y, h);
-        walk(nd.kids[2], x, y + h, h);  walk(nd.kids[3], x + h, y + h, h);
-        return;
-      }
-      const leaf = { x, y, w, item: nd.item || null };
+    portHits = [];
+    portPos.clear();
+    for (const c of leavesOf(tree, 0, 0, 1, [])) {
+      const leaf = { x: c.x * side, y: c.y * side, w: c.w * side, nd: c.nd, item: null };
+      if (c.nd.label) leaf.item = placed.get(idOf(c.nd.label)) || null;
       if (leaf.item && leaf.item.kind === "field") {
-        const res = Math.max(12, Math.min(48, Math.round(w / (2.5 * dpr) ) * (dpr > 1 ? 2 : 1)));
+        const res = Math.max(12, Math.min(48, Math.round(leaf.w / (2.5 * dpr)) * (dpr > 1 ? 2 : 1)));
         leaf.res = res;
         leaf.off = document.createElement("canvas");
         leaf.off.width = res; leaf.off.height = res;
@@ -244,18 +354,17 @@ footer{
         leaf.img = leaf.octx.createImageData(res, res);
       }
       if (leaf.item && leaf.item.kind === "plot") leaf.buf = [];
+      if (leaf.item) placePorts(leaf);
       leaves.push(leaf);
-    })(tree, 0, 0, side);
+    }
   }
   function fit(){
     dpr = Math.min(2, window.devicePixelRatio || 1);
     const css = plane.getBoundingClientRect().width || 640;
     side = Math.round(css * dpr);
     plane.width = side; plane.height = side;
-    placeLeaves();
+    relayout();
   }
-  fit();
-  window.addEventListener("resize", fit);
 
   /* ---- ink on sage: a field value is ink coverage ---- */
   const SAGE = [176, 186, 180], INK = [17, 17, 17];
@@ -307,31 +416,82 @@ footer{
     pctx.stroke();
   }
   function drawCard(leaf){
-    /* an unwired thinker: its name and ports, in mono, if there is room */
+    /* a thinker between wires: its name in mono; the ports are on
+       the edges already */
     if (leaf.w < 34 * dpr) return;
     const g = leaf.item.g, fs = Math.max(8, Math.min(11, leaf.w / (9 * dpr))) * dpr;
     pctx.fillStyle = "rgb(17,17,17)";
     pctx.font = "500 " + fs + "px 'IBM Plex Mono', monospace";
     pctx.textBaseline = "top";
-    pctx.fillText(g.name, leaf.x + 5 * dpr, leaf.y + 5 * dpr, leaf.w - 10 * dpr);
-    if (leaf.w > 70 * dpr) {
-      pctx.fillStyle = "rgb(80,88,83)";
-      pctx.font = fs * 0.85 + "px 'IBM Plex Mono', monospace";
-      const ins  = ((g.ports && g.ports.in)  || []).map(p => p.name).join(" ");
-      const outs = ((g.ports && g.ports.out) || []).map(p => p.name).join(" ");
-      if (ins)  pctx.fillText("in  " + ins,  leaf.x + 5 * dpr, leaf.y + 5 * dpr + fs * 1.5, leaf.w - 10 * dpr);
-      if (outs) pctx.fillText("out " + outs, leaf.x + 5 * dpr, leaf.y + 5 * dpr + fs * 2.6, leaf.w - 10 * dpr);
+    pctx.textAlign = "left";
+    pctx.fillText(g.name, leaf.x + 12 * dpr, leaf.y + 4 * dpr, leaf.w - 24 * dpr);
+  }
+
+  /* ---- ports, wires, messages ---- */
+  function drawPorts(leaf){
+    const id = leaf.item.id;
+    pctx.font = 8.5 * dpr + "px 'IBM Plex Mono', monospace";
+    pctx.textBaseline = "middle";
+    for (const h of portHits) {
+      if (h.nodeId !== id) continue;
+      /* while wiring: the source stays hot, compatible inputs stay
+         ink, everything that cannot take the type dims */
+      let on = true, hot = false;
+      if (wiring) {
+        if (h.dir === "out") { hot = (h.nodeId === wiring.nodeId && h.port === wiring.port); on = hot; }
+        else on = h.nodeId !== wiring.nodeId && TYPE_OK(wiring.type, h.type);
+      }
+      const cx = h.x + h.w / 2, cy = h.y + h.h / 2;
+      pctx.fillStyle = on || hot ? "rgb(17,17,17)" : "rgba(17,17,17,0.22)";
+      const m = (hot ? 4 : 3) * dpr;
+      pctx.fillRect(cx - m, cy - m, 2 * m, 2 * m);
+      if (leaf.w > 80 * dpr) {
+        pctx.fillStyle = on || hot ? "rgba(17,17,17,0.78)" : "rgba(17,17,17,0.25)";
+        const text = leaf.w > 150 * dpr ? h.port + " " + h.type : h.port;
+        if (h.dir === "in") { pctx.textAlign = "left";  pctx.fillText(text, cx + 7 * dpr, cy); }
+        else                { pctx.textAlign = "right"; pctx.fillText(text, cx - 7 * dpr, cy); }
+      }
     }
+    pctx.textAlign = "left";
+  }
+  function drawWires(){
+    for (const w of reader.wires) {
+      const a = portPos.get(w.fromId + "/out/" + w.fromPort);
+      const b = portPos.get(w.toId + "/in/" + w.toPort);
+      if (!a || !b) continue;
+      pctx.strokeStyle = "rgb(17,17,17)";
+      pctx.lineWidth = (w === selectedWire ? 2.5 : 1) * dpr;
+      pctx.beginPath(); pctx.moveTo(a.x, a.y); pctx.lineTo(b.x, b.y); pctx.stroke();
+    }
+    if (wiring && pointer) {
+      const a = portPos.get(wiring.nodeId + "/out/" + wiring.port);
+      if (a) {
+        pctx.strokeStyle = "rgba(17,17,17,0.45)";
+        pctx.lineWidth = dpr;
+        pctx.beginPath(); pctx.moveTo(a.x, a.y); pctx.lineTo(pointer.x, pointer.y); pctx.stroke();
+      }
+    }
+  }
+  function cellMsg(leaf, text){
+    msgs.push({ x: leaf.x + 4 * dpr,
+                y: Math.min(side - 4 * dpr, leaf.y + leaf.w + 11 * dpr),
+                text: text, ttl: 240 });
+  }
+  function flash(text){
+    msgs.push({ x: 6 * dpr, y: side - 8 * dpr, text: text, ttl: 240 });
   }
 
   /* ---- the tick: one shared t, cells staggered over two frames ---- */
-  let t = 0, frame = 0, selected = null;
+  let t = 0, frame = 0, wiring = null, selectedWire = null, pointer = null;
+  const msgs = [];
   function render(){
     pctx.fillStyle = "rgb(" + SAGE.join(",") + ")";
     pctx.fillRect(0, 0, side, side);
+    let any = false;
     for (let i = 0; i < leaves.length; i++) {
       const leaf = leaves[i];
       if (leaf.item) {
+        any = true;
         try {
           if (leaf.item.kind === "field") { if ((frame + i) % 2 === 0 || !leaf.painted) { drawField(leaf, t); leaf.painted = true; } else pctx.drawImage(leaf.off, leaf.x, leaf.y, leaf.w, leaf.w); }
           else if (leaf.item.kind === "plot") drawPlot(leaf, t);
@@ -345,13 +505,34 @@ footer{
         pctx.fillStyle = "rgba(17,17,17,0.75)";
         pctx.font = 8.5 * dpr + "px 'IBM Plex Mono', monospace";
         pctx.textBaseline = "alphabetic";
-        pctx.fillText(leaf.item.g.label, leaf.x + 5 * dpr, leaf.y + leaf.w - 5 * dpr);
+        pctx.textAlign = "left";
+        pctx.fillText(leaf.item.g.label, leaf.x + 12 * dpr, leaf.y + leaf.w - 5 * dpr);
+      }
+      if (leaf.item) drawPorts(leaf);
+    }
+    if (!any) {
+      pctx.fillStyle = "rgba(17,17,17,0.55)";
+      pctx.font = 11 * dpr + "px 'IBM Plex Mono', monospace";
+      pctx.textAlign = "center"; pctx.textBaseline = "middle";
+      pctx.fillText("click a gizmo in the catalogue to add it", side / 2, side / 2);
+      pctx.textAlign = "left"; pctx.textBaseline = "alphabetic";
+    }
+    drawWires();
+    if (target) {
+      const sl = leaves.find(l => l.item && l.item.id === target.id);
+      if (sl) {
+        pctx.strokeStyle = "rgb(17,17,17)";
+        pctx.lineWidth = 2 * dpr;
+        pctx.strokeRect(sl.x + dpr, sl.y + dpr, sl.w - 2 * dpr, sl.w - 2 * dpr);
       }
     }
-    if (selected) {
-      pctx.strokeStyle = "rgb(17,17,17)";
-      pctx.lineWidth = 2 * dpr;
-      pctx.strokeRect(selected.x + dpr, selected.y + dpr, selected.w - 2 * dpr, selected.w - 2 * dpr);
+    pctx.font = 9 * dpr + "px 'IBM Plex Mono', monospace";
+    pctx.textBaseline = "alphabetic"; pctx.textAlign = "left";
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const m = msgs[i];
+      pctx.fillStyle = "rgb(17,17,17)";
+      pctx.fillText(m.text, m.x, m.y);
+      if (--m.ttl <= 0) msgs.splice(i, 1);
     }
     playerTick(t);
     if (!reduced) t += 1;
@@ -375,14 +556,18 @@ footer{
 
   function showRoot(){
     target = null; tabPort = null; stageKind = null;
-    phead.innerHTML = '<span class="sel">root</span> — the catalogue, ' + gizmos.length + " gizmos";
+    let n = 0; walkLabels(tree, () => n++);
+    const nw = reader.wires.length;
+    phead.innerHTML = '<span class="sel">root</span> — the canvas, ' + n +
+      " gizmo" + (n === 1 ? "" : "s") + ", " + nw + " wire" + (nw === 1 ? "" : "s");
     ptabs.innerHTML = ""; pstage.innerHTML = ""; pread.textContent = "";
-    pnote.textContent = "the root has no output port wired — nothing is boxed yet. select a cell to hear it out; escape returns here.";
+    pnote.textContent = n
+      ? "select a cell to hear it out. click an output port, then an input, to wire; click the ground to cancel; click a wire twice to cut it. escape returns here."
+      : "the canvas is empty. click a gizmo in the catalogue to add it.";
   }
   function esc(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
   function select(leaf){
-    if (!leaf || !leaf.item) { selected = null; showRoot(); return; }
-    selected = leaf;
+    if (!leaf || !leaf.item) { showRoot(); return; }
     const g = leaf.item.g;
     target = leaf.item;
     phead.innerHTML = '<span class="sel">' + esc(g.label) + " · " + esc(g.name) + "</span> — " + esc(g.class);
@@ -466,18 +651,178 @@ footer{
     }
   }
 
-  /* ---- select by pointing; the ground and escape go back up ---- */
-  plane.addEventListener("click", ev => {
+  /* ============================================================
+     WIRING — click an output, click a compatible input; the wire
+     is made in the reader and the target pulls from the source
+     the same tick. The ground cancels; a wire clicked twice, or
+     selected and deleted, is cut.
+     ============================================================ */
+  function toPlane(ev){
     const r = plane.getBoundingClientRect();
-    const x = (ev.clientX - r.left) / r.width * side;
-    const y = (ev.clientY - r.top) / r.height * side;
-    const hit = leaves.find(l => l.item && x >= l.x && x < l.x + l.w && y >= l.y && y < l.y + l.w);
-    select(hit || null);
-  });
-  window.addEventListener("keydown", ev => { if (ev.key === "Escape") select(null); });
+    return { x: (ev.clientX - r.left) / (r.width || 1) * side,
+             y: (ev.clientY - r.top) / (r.height || 1) * side };
+  }
+  function hitPort(x, y){
+    return portHits.find(h => x >= h.x && x < h.x + h.w && y >= h.y && y < h.y + h.h) || null;
+  }
+  function distToWire(w, x, y){
+    const a = portPos.get(w.fromId + "/out/" + w.fromPort);
+    const b = portPos.get(w.toId + "/in/" + w.toPort);
+    if (!a || !b) return Infinity;
+    const dx = b.x - a.x, dy = b.y - a.y, len2 = dx * dx + dy * dy || 1;
+    let u = ((x - a.x) * dx + (y - a.y) * dy) / len2;
+    u = u < 0 ? 0 : u > 1 ? 1 : u;
+    const px = a.x + u * dx - x, py = a.y + u * dy - y;
+    return Math.sqrt(px * px + py * py);
+  }
+  function hitWire(x, y){
+    let best = null, bd = 6 * dpr;
+    for (const w of reader.wires) {
+      const d = distToWire(w, x, y);
+      if (d < bd) { bd = d; best = w; }
+    }
+    return best;
+  }
+  function startWire(h){
+    wiring = h;
+    selectedWire = null;
+    const anyIn = portHits.some(q => q.dir === "in" && q.nodeId !== h.nodeId && TYPE_OK(h.type, q.type));
+    if (!anyIn) cellMsg(h.leaf, "nothing on the canvas takes " + h.type);
+  }
+  function makeWire(h){
+    try {
+      reader.connect(wiring.nodeId, wiring.port, h.nodeId, h.port);
+      wiring = null;
+      save();
+    } catch (e) {
+      cellMsg(h.leaf, String((e && e.message) || e));
+    }
+  }
+  function unwire(w){
+    if (reader.disconnect) reader.disconnect(w);
+    else { const i = reader.wires.indexOf(w); if (i >= 0) reader.wires.splice(i, 1); }
+    if (selectedWire === w) selectedWire = null;
+    save();
+  }
 
+  plane.addEventListener("mousemove", ev => { pointer = toPlane(ev); });
+  plane.addEventListener("click", ev => {
+    const p = toPlane(ev);
+    const h = hitPort(p.x, p.y);
+    if (h) {
+      if (h.dir === "out") {
+        if (wiring && wiring.nodeId === h.nodeId && wiring.port === h.port) wiring = null;
+        else startWire(h);
+      } else if (wiring) {
+        makeWire(h);
+      } else {
+        /* a wired input port is the wire's socket: click selects
+           the wire, click again cuts it — reachable even when the
+           cells are adjacent and the wire is a few pixels long */
+        const w = reader.wires.filter(q => q.toId === h.nodeId && q.toPort === h.port).pop();
+        if (w) { if (selectedWire === w) unwire(w); else selectedWire = w; }
+        else cellMsg(h.leaf, "click an output port first");
+      }
+      return;
+    }
+    const w = hitWire(p.x, p.y);
+    if (w) {
+      wiring = null;
+      if (selectedWire === w) unwire(w);
+      else selectedWire = w;
+      return;
+    }
+    selectedWire = null;
+    if (wiring) { wiring = null; return; } // the ground cancels
+    const leaf = leaves.find(l => l.item && p.x >= l.x && p.x < l.x + l.w && p.y >= l.y && p.y < l.y + l.w);
+    select(leaf || null);
+  });
+  window.addEventListener("keydown", ev => {
+    if (ev.key === "Escape") { wiring = null; selectedWire = null; select(null); }
+    else if ((ev.key === "Delete" || ev.key === "Backspace") && selectedWire) unwire(selectedWire);
+  });
+
+  /* ============================================================
+     THE MENU — every catalogue gizmo, filterable; a click puts it
+     in the smallest free cell. The only way onto the canvas for
+     now; add-to-canvas from the feed comes later.
+     ============================================================ */
+  const mlist = document.getElementById("mlist"), mfilter = document.getElementById("mfilter");
+  function renderMenu(){
+    const q = (mfilter.value || "").trim().toLowerCase();
+    mlist.innerHTML = "";
+    for (const g of cat.gizmos) {
+      if (q) {
+        const why = (g.dna && g.dna.why) || {};
+        const hay = (g.label + " " + g.name + " " + g.class + " " +
+          (why.verbs || []).join(" ") + " " + (why.nouns || []).join(" ")).toLowerCase();
+        if (!hay.includes(q)) continue;
+      }
+      const row = document.createElement("button");
+      row.className = "m-row";
+      row.textContent = g.label + " · " + g.name;
+      row.addEventListener("click", () => addGizmo(g.label));
+      mlist.appendChild(row);
+    }
+  }
+  mfilter.addEventListener("input", renderMenu);
+
+  /* ---- the canvas boxed: a Container, one graph body ---- */
+  function serialiseContainer(){
+    const labels = [];
+    walkLabels(tree, l => labels.push(l));
+    return {
+      name: "Canvas",
+      class: "Container",
+      ports: { in: [], out: [] },
+      params: {},
+      body: { graph: {
+        instantiate: labels.map(l => ({ id: idOf(l), label: l })),
+        wire: reader.wires.map(w => ({ from: w.fromId + "." + w.fromPort, to: w.toId + "." + w.toPort })),
+        expose: []
+      } },
+      dna: {
+        label: null, author: "operator", version: 1, gizmo_md: 1,
+        why: { verbs: ["wire", "box"], nouns: ["canvas", "graph"], kills: [],
+               because: "boxed from the canvas" },
+        source: "canvas download",
+        lineage: labels.map(l => { const g = byLabel.get(l); return (g && g.dna && g.dna.id) || l; }),
+        chemistry: [], history: [], tags: ["canvas", "container"]
+      }
+    };
+  }
+  document.getElementById("mdl").addEventListener("click", ev => {
+    ev.preventDefault();
+    const blob = new Blob([JSON.stringify(serialiseContainer(), null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "canvas.gizmo.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  document.getElementById("mclear").addEventListener("click", ev => {
+    ev.preventDefault();
+    try { localStorage.removeItem(LSKEY); } catch (e) {}
+    location.reload();
+  });
+
+  /* ---- start: restore, size, list, tick ---- */
+  load();
+  fit();
+  window.addEventListener("resize", fit);
+  renderMenu();
   showRoot();
   render();
+
+  /* programmatic surface — the smoke harness and the coming
+     operator mode drive the canvas through this, not the DOM */
+  window.PPCanvas = {
+    add: addGizmo,
+    reader: reader,
+    serialise: serialiseContainer,
+    ports: () => portHits.slice(),
+    state: () => ({ tree: tree, wires: reader.wires.slice() })
+  };
 })();
 </script>
 </body>

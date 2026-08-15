@@ -192,7 +192,22 @@
         throw new Error("no match: " + outDecl.type + " ≠ " + toType);
       const wire = { fromId, fromPort, toId, toPort };
       wires.push(wire);
+      to.cacheT = null; // the wire takes effect this tick, not the next
       return wire;
+    }
+
+    /* Remove a wire made by connect. Accepts the wire object or a
+       matching {fromId, fromPort, toId, toPort}. */
+    function disconnect(wire) {
+      let i = wires.indexOf(wire);
+      if (i < 0) i = wires.findIndex(w =>
+        w.fromId === wire.fromId && w.fromPort === wire.fromPort &&
+        w.toId === wire.toId && w.toPort === wire.toPort);
+      if (i < 0) return false;
+      wires.splice(i, 1);
+      const to = nodes.get(wire.toId);
+      if (to) to.cacheT = null;
+      return true;
     }
 
     /* Pull one node's output at tick t. Cached per tick; a float
@@ -273,7 +288,7 @@
       return node;
     }
 
-    return { instantiate, fromPost, connect, pull, setParam, setInput, reload, nodes, wires };
+    return { instantiate, fromPost, connect, disconnect, pull, setParam, setInput, reload, nodes, wires };
   }
 
   const api = { createReader, compile, BUILTINS, BUILTIN_NAMES, noise2 };
