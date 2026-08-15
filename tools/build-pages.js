@@ -121,6 +121,7 @@ footer{ width:var(--col); padding:20px; margin-top:auto; border-top:1px solid va
 <header>
   <div class="wordmark"><a href="index.html">Programmable Pixels</a></div>
   <nav class="tabs">
+    <a href="index.html">Feed</a>
     <a href="manifesto.html"${active === 'manifesto' ? ' class="on"' : ''}>Manifesto</a>
     <a href="law.html"${active === 'law' ? ' class="on"' : ''}>GIZMO.md</a>
   </nav>

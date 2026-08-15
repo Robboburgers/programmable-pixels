@@ -181,11 +181,17 @@ footer{
 .dl-row a{ color:var(--ink); text-decoration:none; border-bottom:1px solid var(--line); }
 .dl-row a:hover{ border-bottom-color:var(--ink); }
 
+/* ---- retired (numbers permanent, pieces not) ---- */
+.post.is-retired{ padding:10px 20px; }
+.post.is-retired p{ font-family:var(--font-mono); font-size:11px; color:var(--grey);
+  letter-spacing:.04em; text-transform:uppercase; max-width:none; }
+.post.is-retired .cat{ color:var(--ink); font-weight:500; }
+
 /* ---- nav tabs + free line ---- */
 .tabs{ display:flex; gap:16px; }
 .tabs a{ font-family:var(--font-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
   color:var(--ink); text-decoration:none; border-bottom:1px solid transparent; padding-bottom:2px; }
-.tabs a:hover{ border-bottom-color:var(--ink); }
+.tabs a:hover, .tabs a.on{ border-bottom-color:var(--ink); }
 .freeline{ width:var(--col); padding:0 20px 14px; font-family:var(--font-mono); font-size:11px;
   letter-spacing:.04em; color:var(--grey); }
 .freeline a{ color:var(--ink); }
@@ -205,6 +211,7 @@ footer{
 <header>
   <div class="wordmark">Programmable Pixels</div>
   <nav class="tabs">
+    <a href="index.html" class="on">Feed</a>
     <a href="manifesto.html">Manifesto</a>
     <a href="law.html">GIZMO.md</a>
   </nav>
@@ -233,6 +240,8 @@ footer{
    - `date` is the day it entered the catalogue. Both are immutable.
    ============================================================ */
 const POSTS = [
+  { cat:"PP-016", date:"2026-08-14", type:"image", title:"Recursive Grid", tags:["Generative","Blender"],
+    src:"assets/pp-016.webp", alt:"Fractal grid subdivision \u2014 order at every scale, noise at every level" },
   { cat:"PP-0BD", date:"2026-08-15", type:"patch", title:"Pulse", tags:["Gizmo","Patch","Interactive"],
     def:{ name:"Pulse", class:"Generator",
       ports:{ in:[], out:[{name:"wave",type:"float"}] },
@@ -903,54 +912,29 @@ const POSTS = [
     do_pixel:"px = x * cols; tri = abs(px - floor(px + 0.5)) * 2.0; sy = y * rows + tri * amplitude; d = abs(sy - floor(sy + 0.5)); smoothstep(width, 0.0, d)",
     params:{cols:{value:4,min:1,max:16},rows:{value:8,min:2,max:30},amplitude:{value:0.5,min:0,max:2},width:{value:0.15,min:0.02,max:0.4}},
     dna:{ author:"makers-factory", tags:["pattern","zigzag","chevron","stripe","geometric"], why:"Chevron/zigzag stripes: triangle wave offsets horizontal stripes to create V-shaped patterns. Amplitude controls the zigzag depth, rows controls stripe density. The simplest geometric pattern that creates directional visual flow without curves." } },
-  { cat:"PP-017", date:"2026-08-14", type:"text", title:"Tools as art", tags:["Log"],
-    body:["Every gizmo below is a single expression \u2014 one line of math that paints every pixel, every frame.",
-          "Drag the sliders. The formula is the artwork; the parameters are the frame."] },
-  { cat:"PP-016", date:"2026-08-14", type:"image", title:"Recursive Grid", tags:["Generative","Blender"],
-    src:"assets/pp-016.webp", alt:"Fractal grid subdivision \u2014 order at every scale, noise at every level" },
-  { cat:"PP-015", date:"2026-08-14", type:"text", title:"The Kitchen Sync", tags:["Fiction","Belt Universe"],
-    body:["Chapter 1 of the Belt novels is being serialised here. First instalment incoming.",
-          "The story started in a game. The game became a novel. The novel is becoming an animation."] },
-  { cat:"PP-014", date:"2026-08-14", type:"video", title:"Conveyor dream", tags:["Animation","Blender"],
-    src:"assets/pp-014.mp4", poster:"assets/pp-014.jpg", loop:true },
-  { cat:"PP-013", date:"2026-08-14", type:"video", title:"Stacker arm cycle", tags:["Animation","Blender"],
-    src:"assets/pp-013.mp4", poster:"assets/pp-013.jpg", loop:true },
-  { cat:"PP-012", date:"2026-08-14", type:"video", title:"Crane swing", tags:["Animation","Blender"],
-    src:"assets/pp-012.mp4", poster:"assets/pp-012.jpg", loop:true },
-  { cat:"PP-011", date:"2026-08-14", type:"video", title:"Rail loop", tags:["Animation","Blender"],
-    src:"assets/pp-011.mp4", poster:"assets/pp-011.jpg", loop:true },
-  { cat:"PP-010", date:"2026-08-14", type:"video", title:"Belt run", tags:["Animation","Blender"],
-    src:"assets/pp-010.mp4", poster:"assets/pp-010.jpg", loop:true },
-  { cat:"PP-00F", date:"2026-08-14", type:"image", title:"Hex terrain", tags:["Generative","Blender"],
-    src:"assets/pp-00f.webp", alt:"Procedural hex landscape" },
-  { cat:"PP-00E", date:"2026-08-14", type:"image", title:"Silo cluster", tags:["Generative","Blender"],
-    src:"assets/pp-00e.webp", alt:"Industrial silo array" },
-  { cat:"PP-00D", date:"2026-08-14", type:"image", title:"Pipe nest", tags:["Generative","Blender"],
-    src:"assets/pp-00d.webp", alt:"Dense pipe network" },
-  { cat:"PP-00C", date:"2026-08-14", type:"image", title:"Gantry stack", tags:["Generative","Blender"],
-    src:"assets/pp-00c.webp", alt:"Layered gantry structures" },
-  { cat:"PP-00B", date:"2026-08-14", type:"image", title:"Crate wall", tags:["Generative","Blender"],
-    src:"assets/pp-00b.webp", alt:"Grid of shipping containers" },
-  { cat:"PP-00A", date:"2026-08-14", type:"image", title:"Tower row", tags:["Generative","Blender"],
-    src:"assets/pp-00a.webp", alt:"Repeating tower modules" },
-  { cat:"PP-009", date:"2026-08-14", type:"image", title:"Panel grid", tags:["Generative","Blender"],
-    src:"assets/pp-009.webp", alt:"Modular panel wall" },
-  { cat:"PP-008", date:"2026-08-14", type:"image", title:"Frame scaffold", tags:["Generative","Blender"],
-    src:"assets/pp-008.webp", alt:"Parametric scaffolding" },
-  { cat:"PP-006", date:"2026-08-14", type:"webgl", title:"Dustfield", tags:["Live","WebGL"], note:"tap to disturb" },
-  { cat:"PP-005", date:"2026-08-14", type:"cracktro", title:"Loader", tags:["Demo","ASCII"], note:"tap to change the copper" },
-  { cat:"PP-001", date:"2026-08-14", type:"text",  title:"What this is", tags:["Log"],
-    body:["One feed, one operator. No algorithm, no comments \u2014 just work, newest first.",
-          "Everything here has a catalogue number. PP-001 is this site itself.",
-          "Novels became a game. The game is becoming animations. Everything lands here first."] },
-  { cat:"PP-004", date:"2026-08-14", type:"music", title:"Belt Ambient 01", tags:["Audio","Generative"],
-    body:["Never plays the same way twice."] },
-  { cat:"PP-003", date:"2026-08-14", type:"game",  title:"BeltMiner", tags:["Game","Python"],
-    body:["A mining game set in the world of the novels."], href:"#", cta:"Get the game" },
-  { cat:"PP-007", date:"2026-08-14", type:"video", title:"First animation", tags:["Film"],
-    body:["The first animated piece from the novels docks here."] },
-  { cat:"PP-002", date:"2026-08-14", type:"lock",  title:"Follow the feed", tags:["Subscribe"],
-    body:["Leave an address, get one line when something new lands."] },
+  /* Retired 2026-08-15, operator ruling. Numbers permanent — see retired.md */
+  { cat:"PP-017", date:"2026-08-14", type:"retired", title:"Tools as art" },
+  { cat:"PP-015", date:"2026-08-14", type:"retired", title:"The Kitchen Sync" },
+  { cat:"PP-014", date:"2026-08-14", type:"retired", title:"Conveyor dream" },
+  { cat:"PP-013", date:"2026-08-14", type:"retired", title:"Stacker arm cycle" },
+  { cat:"PP-012", date:"2026-08-14", type:"retired", title:"Crane swing" },
+  { cat:"PP-011", date:"2026-08-14", type:"retired", title:"Rail loop" },
+  { cat:"PP-010", date:"2026-08-14", type:"retired", title:"Belt run" },
+  { cat:"PP-00F", date:"2026-08-14", type:"retired", title:"Hex terrain" },
+  { cat:"PP-00E", date:"2026-08-14", type:"retired", title:"Silo cluster" },
+  { cat:"PP-00D", date:"2026-08-14", type:"retired", title:"Pipe nest" },
+  { cat:"PP-00C", date:"2026-08-14", type:"retired", title:"Gantry stack" },
+  { cat:"PP-00B", date:"2026-08-14", type:"retired", title:"Crate wall" },
+  { cat:"PP-00A", date:"2026-08-14", type:"retired", title:"Tower row" },
+  { cat:"PP-009", date:"2026-08-14", type:"retired", title:"Panel grid" },
+  { cat:"PP-008", date:"2026-08-14", type:"retired", title:"Frame scaffold" },
+  { cat:"PP-007", date:"2026-08-14", type:"retired", title:"First animation" },
+  { cat:"PP-006", date:"2026-08-14", type:"retired", title:"Dustfield" },
+  { cat:"PP-005", date:"2026-08-14", type:"retired", title:"Loader" },
+  { cat:"PP-004", date:"2026-08-14", type:"retired", title:"Belt Ambient 01" },
+  { cat:"PP-003", date:"2026-08-14", type:"retired", title:"BeltMiner" },
+  { cat:"PP-002", date:"2026-08-14", type:"retired", title:"Follow the feed" },
+  { cat:"PP-001", date:"2026-08-14", type:"retired", title:"What this is" },
 ];
 
 const tagRow = p => `<div class="tags"><span class="cat">${p.cat}</span>${
@@ -958,6 +942,8 @@ const tagRow = p => `<div class="tags"><span class="cat">${p.cat}</span>${
 }<span class="date">${p.date}</span></div>`;
 
 const R = {
+  retired:(p)=>`<article class="post is-retired"><p><span class="cat">${p.cat}</span> &middot; ${p.title} &middot; retired, superseded by the gizmo catalogue</p></article>`,
+
   patch:(p)=>{
     const id = p.cat.toLowerCase().replace("-","");
     const sliders = p.def.params ? Object.entries(p.def.params).map(([k,v])=>
@@ -1017,220 +1003,6 @@ const R = {
 };
 document.getElementById("feed").innerHTML = POSTS.map(p=>R[p.type](p)).join("");
 document.getElementById("yr").textContent = new Date().getFullYear();
-
-/* ============================================================
-   DUSTFIELD — WebGL fragment shader, tap-reactive
-   ============================================================ */
-(function(){
-  const cv = document.getElementById("wglc"), wrap = document.getElementById("wgl");
-  const gl = cv.getContext("webgl");
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if(!gl){ wrap.querySelector(".corner").textContent = "webgl unavailable"; return; }
-
-  const vs = `attribute vec2 p; void main(){ gl_Position = vec4(p,0.,1.); }`;
-  const fs = `
-  precision mediump float;
-  uniform vec2 u_res; uniform float u_t; uniform vec3 u_click;
-  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
-  float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
-    return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y); }
-  float fbm(vec2 p){ float v=0., a=.5; for(int k=0;k<5;k++){ v+=a*noise(p); p*=2.03; a*=.5; } return v; }
-  void main(){
-    vec2 uv = (gl_FragCoord.xy - .5*u_res)/u_res.y;
-    float t = u_t*.05;
-    float d = length(uv - u_click.xy);
-    float age = u_t - u_click.z;
-    float wave = exp(-3.*age) * sin(18.*d - 7.*age) * smoothstep(1.2, 0., d);
-    uv += normalize(uv - u_click.xy + 1e-4) * wave * .05;
-    float n = fbm(uv*2.4 + vec2(t, -t*.6));
-    n += .35*fbm(uv*6. - vec2(t*1.7, 0.));
-    // monochrome dust: silver on black, quiet
-    vec3 dust = mix(vec3(.015), vec3(.55,.56,.58), smoothstep(.5,1.02,n));
-    vec2 sp = uv*u_res.y*.045 + vec2(t*4., 0.);
-    float s = step(.997, hash(floor(sp))) * fract(sin(u_t + hash(floor(sp))*99.)*.5+.5);
-    vec2 sp2 = uv*u_res.y*.09 + vec2(t*9., 0.);
-    float s2 = step(.9985, hash(floor(sp2)));
-    vec3 col = dust + (s*.95 + s2*.6)*vec3(1.);
-    col += vec3(1.) * max(wave,0.) * .5;
-    col *= 1. - .5*dot(uv,uv);
-    gl_FragColor = vec4(col,1.);
-  }`;
-  function sh(type,src){ const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s); return s; }
-  const prog = gl.createProgram();
-  gl.attachShader(prog, sh(gl.VERTEX_SHADER,vs));
-  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER,fs));
-  gl.linkProgram(prog); gl.useProgram(prog);
-  const buf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
-  const loc = gl.getAttribLocation(prog,"p");
-  gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
-  const uRes = gl.getUniformLocation(prog,"u_res"),
-        uT   = gl.getUniformLocation(prog,"u_t"),
-        uC   = gl.getUniformLocation(prog,"u_click");
-  let click = [10,10,-99], t0 = performance.now();
-
-  function size(){
-    const dpr = Math.min(devicePixelRatio||1, 2), r = wrap.getBoundingClientRect();
-    cv.width = r.width*dpr; cv.height = r.height*dpr;
-    gl.viewport(0,0,cv.width,cv.height);
-  }
-  size(); addEventListener("resize", size);
-
-  wrap.addEventListener("pointerdown", e=>{
-    const r = wrap.getBoundingClientRect();
-    const x = ((e.clientX-r.left)/r.width  - .5) * (r.width/r.height);
-    const y = -((e.clientY-r.top)/r.height - .5);
-    click = [x, y, (performance.now()-t0)/1000];
-  });
-
-  function draw(){
-    const t = (performance.now()-t0)/1000;
-    gl.uniform2f(uRes, cv.width, cv.height);
-    gl.uniform1f(uT, reduced ? 0 : t);
-    gl.uniform3f(uC, click[0], click[1], click[2]);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-    requestAnimationFrame(draw);
-  }
-  draw();
-})();
-
-/* ============================================================
-   LOADER — original cracktro homage (ST/Amiga era style).
-   Low-res 2D canvas, upscaled pixelated. Tap cycles the copper.
-   ============================================================ */
-(function(){
-  const cv = document.getElementById("ctroc"), wrap = document.getElementById("ctro");
-  if(!cv) return;
-  const ctx2 = cv.getContext("2d");
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const W = 320, H = 240;                     // authentic low resolution
-  cv.width = W; cv.height = H;
-
-  const SCROLL = "   +++ PROGRAMMABLE PIXELS PRESENTS ... BELTMINER +++ " +
-    "NO CRACK NEEDED - IT WAS FREE ALL ALONG +++ CODE, GFX AND MUSIC BY ONE OPERATOR +++ " +
-    "GREETINGS FLY OUT TO THE BELT ... AND TO EVERYONE STILL READING SINE SCROLLERS IN " +
-    (new Date().getFullYear()) + " +++ PRESS PLAY ON TAPE +++      ";
-
-  // copper palettes — tap to cycle
-  const PALETTES = [
-    ["#1a0533","#7b2ff7","#f107a3","#ffb3f6"],
-    ["#001b2e","#0f7bd4","#5fd0ff","#dff6ff"],
-    ["#1c1c1c","#4d4d4d","#bfbfbf","#ffffff"],   // house monochrome
-    ["#2b1a00","#c96f00","#ffc400","#fff2b3"],
-  ];
-  let pal = 0;
-  wrap.addEventListener("pointerdown", ()=>{ pal = (pal+1) % PALETTES.length; });
-
-  let t = 0;
-  function draw(){
-    const P = PALETTES[pal];
-    ctx2.fillStyle = "#000"; ctx2.fillRect(0,0,W,H);
-
-    // copper bars: horizontal raster gradients breathing up and down
-    for(let i=0; i<5; i++){
-      const cy = H*0.5 + Math.sin(t*.02 + i*1.2)*70;
-      for(let r=-10; r<=10; r++){
-        const shade = P[Math.max(0, 3 - Math.floor(Math.abs(r)/3.4))];
-        ctx2.fillStyle = shade;
-        ctx2.globalAlpha = .5;
-        ctx2.fillRect(0, cy+r, W, 1);
-      }
-    }
-    ctx2.globalAlpha = 1;
-
-    // ASCII block logo: "PP!" built from characters — the pixels ARE text
-    ctx2.font = "10px monospace";
-    ctx2.textBaseline = "top";
-    const LOGO = [
-      "  ___   ___    _ ",
-      " | _ \\ | _ \\  | |",
-      " |  _/ |  _/  |_|",
-      " |_|   |_|    (_)",
-    ];
-    const ly = 28 + (reduced ? 0 : Math.sin(t*.03)*6);
-    LOGO.forEach((row,i)=>{
-      ctx2.fillStyle = "#000"; ctx2.fillText(row, 111, ly + i*11 + 1);
-      ctx2.fillStyle = P[3];   ctx2.fillText(row, 110, ly + i*11);
-    });
-    ctx2.fillStyle = P[2];
-    ctx2.font = "8px monospace";
-    ctx2.fillText("P R O G R A M M A B L E   P I X E L S", 62, ly + 50);
-
-    // sine scroller along the bottom, letter by letter
-    ctx2.font = "bold 14px monospace";
-    const speed = reduced ? 0 : 1.6;
-    const off = Math.floor(t*speed);
-    for(let i=0; i<28; i++){
-      const ch = SCROLL[(Math.floor(off/9) + i) % SCROLL.length];
-      const x = i*12 - (off % 9);
-      const y = 190 + (reduced ? 0 : Math.sin((t*.06) + i*.55)*14);
-      ctx2.fillStyle = "#000"; ctx2.fillText(ch, x+1, y+1);
-      ctx2.fillStyle = P[3];   ctx2.fillText(ch, x, y);
-    }
-
-    // scanlines
-    ctx2.fillStyle = "rgba(0,0,0,.25)";
-    for(let y=0; y<H; y+=2) ctx2.fillRect(0,y,W,1);
-
-    t++;
-    requestAnimationFrame(draw);
-  }
-  draw();
-})();
-
-/* ============================================================
-   BELT AMBIENT 01 — generative Web Audio
-   ============================================================ */
-(function(){
-  const btn = document.getElementById("playbtn"),
-        deck = document.getElementById("deck"),
-        bars = deck.querySelectorAll(".wave span");
-  let ctx, master, timer = null, vuTimer = null;
-  const scale = [0, 3, 5, 7, 10, 12, 15];
-  const base = 110;
-
-  function boot(){
-    ctx = new (window.AudioContext||window.webkitAudioContext)();
-    master = ctx.createGain(); master.gain.value = .5;
-    const lp = ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value = 1800;
-    master.connect(lp).connect(ctx.destination);
-    [0, 4].forEach(det=>{
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.type="sawtooth"; o.frequency.value = base/2; o.detune.value = det;
-      g.gain.value = .05; o.connect(g).connect(master); o.start();
-    });
-  }
-  function pluck(){
-    const st = scale[Math.floor(Math.random()*scale.length)];
-    const oct = Math.random() < .3 ? 2 : 1;
-    const f = base * Math.pow(2, st/12) * oct;
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = "triangle"; o.frequency.value = f;
-    const now = ctx.currentTime;
-    g.gain.setValueAtTime(.0001, now);
-    g.gain.exponentialRampToValueAtTime(.22, now+.02);
-    g.gain.exponentialRampToValueAtTime(.0001, now+1.4);
-    o.connect(g).connect(master); o.start(now); o.stop(now+1.5);
-  }
-  function start(){
-    if(!ctx) boot();
-    ctx.resume();
-    timer = setInterval(()=>{ if(Math.random()<.75) pluck(); }, 480);
-    vuTimer = setInterval(()=>bars.forEach(b=>b.style.height = (2+Math.random()*30)+"px"), 130);
-    deck.classList.add("playing");
-    btn.textContent = "Stop"; btn.setAttribute("aria-pressed","true");
-  }
-  function stop(){
-    clearInterval(timer); clearInterval(vuTimer); timer = null;
-    if(ctx) ctx.suspend();
-    bars.forEach(b=>b.style.height = "2px");
-    deck.classList.remove("playing");
-    btn.textContent = "Play"; btn.setAttribute("aria-pressed","false");
-  }
-  btn.addEventListener("click", ()=> timer ? stop() : start());
-})();
-
 
 /* ============================================================
    GIZMO PLAYER — compiles do_pixel expressions into live
