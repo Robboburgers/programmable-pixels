@@ -1,16 +1,28 @@
-# PROGRAMMABLE PIXELS — site repo
+# PROGRAMMABLE PIXELS
 
-Front of house only. The studio (`pp-studio`, private) makes; this repo
-shows. `/publish` is the only writer here: a finished gizmo folder into
-`gizmos/<name>/` (JSON + zip + ice as needed), one object appended to
-POSTS, `catalogue.json` regenerated, push.
+A reader and a catalogue. `index.html` is the whole site; `reader.js`
+runs every gizmo in it; `catalogue.json` lists what is published;
+`GIZMO.md` is the law — what a gizmo is, its schema, its ports.
 
-- Never edit a published gizmo; never reuse, renumber or reassign a label.
-  Labels are five hex digits (next to assign is tracked in pp-studio's
-  retired.md). Catalogue v0 (PP-001..PP-017) is closed.
-- The site is: `index.html`, `reader.js`, `GIZMO.md`, `manifesto.md` (+ the
-  two rendered pages), `api.md`, `catalogue.json`, `vocabulary.json`,
-  `gizmos/<name>/`. Nothing else — ideas, tools, dictations, and anything
-  that makes a gizmo belong in pp-studio.
-- Quiet gallery style: the media is loud, the page is silent. IBM Plex Mono
-  for metadata; all identity tokens in `:root`.
+## Publishing
+
+A gizmo is published by adding its folder under `gizmos/<name>/`
+(the .gizmo.json, a zip, ice media as needed) and one entry to
+`catalogue.json`. Nothing else changes.
+
+- Never edit a published gizmo; fixes are version bumps, new files.
+- Never reuse, renumber or reassign a label. Labels are five hex
+  digits (PP-00001 onward); catalogue v0 (PP-001..PP-017) is closed.
+
+## What lives here
+
+`index.html`, `reader.js`, `GIZMO.md`, `manifesto.md` (+ the rendered
+pages), `api.md`, `catalogue.json`, `vocabulary.json`,
+`gizmos/<name>/`. Nothing else. This repo has no studio — no tools,
+no drafts, no process. Bring your own; the reader is free and so is
+everything in it.
+
+## Style
+
+Quiet gallery: the media is loud, the page is silent. IBM Plex Mono
+for metadata; all identity tokens in `:root`.
