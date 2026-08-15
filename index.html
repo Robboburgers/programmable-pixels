@@ -190,6 +190,22 @@ footer{
   letter-spacing:.04em; color:var(--grey); }
 .freeline a{ color:var(--ink); }
 
+/* ---- search (the index is the file) ---- */
+.searchrow{ width:var(--col); padding:0 20px 6px; }
+.searchrow input{
+  width:100%; font-family:var(--font-mono); font-size:12px; letter-spacing:.02em;
+  padding:8px 0; border:0; border-bottom:1px solid var(--line);
+  background:none; color:var(--ink); outline:none; }
+.searchrow input:focus{ border-bottom-color:var(--ink); }
+.searchrow input::placeholder{ color:var(--grey); }
+
+/* ---- lane links (triage + source) ---- */
+.lane-links{ display:flex; gap:18px; align-items:baseline; padding-top:10px; }
+.lane-links .triage-line{ padding-top:0; }
+.src-link{ font-family:var(--font-mono); font-size:11px; letter-spacing:.04em;
+  color:var(--grey); text-decoration:none; }
+.src-link:hover{ color:var(--ink); }
+
 /* ---- taste triage (tell it what it feels like) ---- */
 .triage-line{ font-family:var(--font-mono); font-size:11px; color:var(--grey);
   letter-spacing:.04em; padding-top:10px; cursor:pointer; width:fit-content; }
@@ -210,6 +226,19 @@ footer{
 .triage .tnote{ font-family:var(--font-mono); font-size:10px; color:var(--grey);
   margin-top:8px; letter-spacing:.04em; max-width:none; }
 
+/* ---- studio (operator only) ---- */
+.studio-box{ width:var(--col); padding:14px 20px 10px; border-top:1px solid var(--line); }
+.studio-box textarea{ width:100%; font-family:var(--font-mono); font-size:12px; padding:8px;
+  border:1px solid var(--line); background:var(--ground); color:var(--ink); resize:vertical; }
+.studio-row{ display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; }
+.studio-row input{ font-family:var(--font-mono); font-size:11px; padding:6px 8px;
+  border:1px solid var(--line); background:var(--ground); color:var(--ink); flex:1; min-width:120px; }
+.studio-row button{ font-family:var(--font-mono); font-size:11px; text-transform:uppercase;
+  letter-spacing:.06em; padding:6px 14px; border:1px solid var(--ink); background:var(--ink);
+  color:var(--ground); cursor:pointer; }
+.work-lane{ opacity:.75; }
+.work-lane .cat{ color:var(--grey) !important; }
+
 /* ---- mail gate (first download) ---- */
 .gate{ padding:10px 0 4px; }
 .gate p{ font-family:var(--font-mono); font-size:11px; color:var(--grey); margin:0 0 8px; letter-spacing:.04em; }
@@ -228,11 +257,14 @@ footer{
     <a href="index.html" class="on">Feed</a>
     <a href="manifesto.html">Manifesto</a>
     <a href="law.html">GIZMO.md</a>
+    <a href="https://github.com/Robboburgers/programmable-pixels">Clone</a>
   </nav>
   <div class="live"><span class="dot"></span>Live</div>
 </header>
 
 <div class="freeline">Everything here is free. Clone it, build, share. Read the manifesto if you want to know <a href="manifesto.html">why</a>.</div>
+
+<div class="searchrow"><input id="search" type="search" placeholder="search — name, verb, noun, tag, class, port, label" aria-label="Search the catalogue"></div>
 
 <main id="feed"></main>
 
@@ -254,7 +286,7 @@ footer{
    - `date` is the day it entered the catalogue. Both are immutable.
    ============================================================ */
 const POSTS = [
-  {"cat":"PP-000A7","date":"2026-08-15","type":"patch","title":"Prose","tags":["Gizmo","Patch","Interactive"],"def":{"name":"Prose","class":"Transform","ports":{"in":[{"name":"text","type":"words"},{"name":"loop","type":"trigger"}],"out":[{"name":"length","type":"float"},{"name":"words","type":"float"},{"name":"sentences","type":"float"},{"name":"paragraphs","type":"float"},{"name":"density","type":"field"},{"name":"progress","type":"float"},{"name":"char","type":"float"},{"name":"letter","type":"trigger"},{"name":"vowel","type":"trigger"},{"name":"space","type":"trigger"},{"name":"sentence","type":"trigger"},{"name":"paragraph","type":"trigger"},{"name":"syllable","type":"trigger"},{"name":"wordlen","type":"float"},{"name":"sentlen","type":"float"},{"name":"rhythm","type":"float"},{"name":"current","type":"words"},{"name":"line","type":"words"}]},"params":{"rate":{"value":12,"min":1,"max":60,"step":1}},"body":{"code":"function evalProse(params, inputs, t) {\n  /* why: it gives no meaning, it just extracts working values you can\n     drive other stuff with, from whatever the characters are. */\n  var text = String(inputs.text || \"\");\n  var rate = params.rate; /* characters per second; the reader ticks at 60/s */\n  var n = text.length;\n  var Z = { length: 0, words: 0, sentences: 0, paragraphs: 0,\n    density: function () { return 0; },\n    progress: 0, char: 0, letter: 0, vowel: 0, space: 0, sentence: 0,\n    paragraph: 0, syllable: 0, wordlen: 0, sentlen: 0, rhythm: 0,\n    current: \"\", line: \"\" };\n  if (!n) return Z;\n\n  var isSpace = function (c) { return c === \" \" || c === \"\\t\" || c === \"\\n\" || c === \"\\r\"; };\n  var isVowel = function (c) { return \"aeiouAEIOU\".indexOf(c) >= 0; };\n  var isLetter = function (c) { return c.toLowerCase() !== c.toUpperCase(); };\n  var isStop = function (c) { return c === \".\" || c === \"!\" || c === \"?\"; };\n\n  /* --- the whole (constant over t) --- */\n  var wordCount = 0, sentCount = 0, paraCount = 1, inWord = false;\n  for (var i = 0; i < n; i++) {\n    var c = text[i];\n    if (!isSpace(c) && !inWord) { inWord = true; wordCount++; }\n    if (isSpace(c)) inWord = false;\n    if (isStop(c) && !isStop(text[i + 1] || \"\")) sentCount++;\n    if (c === \"\\n\" && text[i + 1] === \"\\n\") paraCount++;\n  }\n  var density = function (x) {\n    var cpos = Math.floor(Math.max(0, Math.min(0.9999, x)) * n);\n    var w = Math.max(8, Math.floor(n / 64));\n    var a = Math.max(0, cpos - w), b = Math.min(n, cpos + w), ink = 0;\n    for (var j = a; j < b; j++) if (!isSpace(text[j])) ink++;\n    return b > a ? ink / (b - a) : 0;\n  };\n\n  /* --- the playhead (per tick; loops at the end) --- */\n  var pos = Math.floor(t * rate / 60) % n;\n  var prev = t > 0 ? Math.floor((t - 1) * rate / 60) % n : -1;\n  var ch = text[pos];\n\n  /* a trigger fires if the boundary was crossed since the last tick */\n  var crossed = function (test) {\n    if (prev === pos || prev < 0) return prev < 0 && test(text[pos], pos) ? 1 : 0;\n    var k = (prev + 1) % n;\n    while (true) {\n      if (test(text[k], k)) return 1;\n      if (k === pos) return 0;\n      k = (k + 1) % n;\n    }\n  };\n  var letter = crossed(function (c) { return isLetter(c); });\n  var vowel = crossed(function (c) { return isVowel(c); });\n  var space = crossed(function (c) { return isSpace(c); });\n  var sentence = crossed(function (c) { return isStop(c); });\n  var paragraph = crossed(function (c, k) { return c === \"\\n\" && text[k + 1] === \"\\n\"; });\n  var syllable = crossed(function (c, k) {\n    /* vowel-group boundary, heuristic: a vowel whose predecessor is not */\n    return isVowel(c) && !isVowel(text[k - 1] || \" \");\n  });\n\n  /* current word and its length */\n  var ws = pos; while (ws > 0 && !isSpace(text[ws - 1])) ws--;\n  var we = pos; while (we < n && !isSpace(text[we])) we++;\n  var current = text.slice(ws, we);\n\n  /* current sentence and its length in words */\n  var ss = pos; while (ss > 0 && !isStop(text[ss - 1])) ss--;\n  var se = pos; while (se < n && !isStop(text[se])) se++;\n  var line = text.slice(ss, Math.min(se + 1, n)).trim();\n  var sentlen = line.split(/\\s+/).filter(function (s) { return s; }).length;\n\n  /* rhythm: syllables per second over the last ~2s, 0..1 (8 syl/s = 1) */\n  var back = Math.min(pos, Math.floor(2 * rate));\n  var syl = 0;\n  for (var m = pos - back; m <= pos; m++) {\n    if (isVowel(text[m]) && !isVowel(text[m - 1] || \" \")) syl++;\n  }\n  var rhythm = Math.min(1, (syl / 2) / 8);\n\n  return {\n    length: n, words: wordCount, sentences: sentCount, paragraphs: paraCount,\n    density: density,\n    progress: pos / n, char: text.charCodeAt(pos),\n    letter: letter, vowel: vowel, space: space, sentence: sentence,\n    paragraph: paragraph, syllable: syllable,\n    wordlen: current.length, sentlen: sentlen, rhythm: rhythm,\n    current: current, line: line\n  };\n}"}},"inputs":{"text":"A gizmo is a function. A patch is a nested expression. The tick re-evaluates it forever. The juice is the return value."},"chain":{"fromPort":"rhythm","to":"PP-00001","toPort":"warp"},"downloads":[{"label":"prose.gizmo.json","href":"gizmos/prose/prose.gizmo.json"},{"label":"folder (zip)","href":"gizmos/prose/prose.zip"}],"dna":{"author":"robbo","tags":["transform","words","playhead","signals"],"why":"Any text in, signals out. Prose walks whatever you write like a playhead — boundaries, rhythm, density — and gives no meaning, just working values you can drive other stuff with. Here it walks the four-line seed at twelve characters a second, and its rhythm port drives Domain Warp's warp: the text breathes the marble. The first words on the wire."}},
+  {"cat":"PP-000A7","date":"2026-08-15","type":"patch","title":"Prose","tags":["Gizmo","Patch","Interactive"],"def":{"name":"Prose","class":"Transform","ports":{"in":[{"name":"text","type":"words"},{"name":"loop","type":"trigger"}],"out":[{"name":"length","type":"float"},{"name":"words","type":"float"},{"name":"sentences","type":"float"},{"name":"paragraphs","type":"float"},{"name":"density","type":"field"},{"name":"progress","type":"float"},{"name":"char","type":"float"},{"name":"letter","type":"trigger"},{"name":"vowel","type":"trigger"},{"name":"space","type":"trigger"},{"name":"sentence","type":"trigger"},{"name":"paragraph","type":"trigger"},{"name":"syllable","type":"trigger"},{"name":"wordlen","type":"float"},{"name":"sentlen","type":"float"},{"name":"rhythm","type":"float"},{"name":"current","type":"words"},{"name":"line","type":"words"}]},"params":{"rate":{"value":12,"min":1,"max":60,"step":1}},"body":{"code":"function evalProse(params, inputs, t) {\n  /* why: it gives no meaning, it just extracts working values you can\n     drive other stuff with, from whatever the characters are. */\n  var text = String(inputs.text || \"\");\n  var rate = params.rate; /* characters per second; the reader ticks at 60/s */\n  var n = text.length;\n  var Z = { length: 0, words: 0, sentences: 0, paragraphs: 0,\n    density: function () { return 0; },\n    progress: 0, char: 0, letter: 0, vowel: 0, space: 0, sentence: 0,\n    paragraph: 0, syllable: 0, wordlen: 0, sentlen: 0, rhythm: 0,\n    current: \"\", line: \"\" };\n  if (!n) return Z;\n\n  var isSpace = function (c) { return c === \" \" || c === \"\\t\" || c === \"\\n\" || c === \"\\r\"; };\n  var isVowel = function (c) { return \"aeiouAEIOU\".indexOf(c) >= 0; };\n  var isLetter = function (c) { return c.toLowerCase() !== c.toUpperCase(); };\n  var isStop = function (c) { return c === \".\" || c === \"!\" || c === \"?\"; };\n\n  /* --- the whole (constant over t) --- */\n  var wordCount = 0, sentCount = 0, paraCount = 1, inWord = false;\n  for (var i = 0; i < n; i++) {\n    var c = text[i];\n    if (!isSpace(c) && !inWord) { inWord = true; wordCount++; }\n    if (isSpace(c)) inWord = false;\n    if (isStop(c) && !isStop(text[i + 1] || \"\")) sentCount++;\n    if (c === \"\\n\" && text[i + 1] === \"\\n\") paraCount++;\n  }\n  var density = function (x) {\n    var cpos = Math.floor(Math.max(0, Math.min(0.9999, x)) * n);\n    var w = Math.max(8, Math.floor(n / 64));\n    var a = Math.max(0, cpos - w), b = Math.min(n, cpos + w), ink = 0;\n    for (var j = a; j < b; j++) if (!isSpace(text[j])) ink++;\n    return b > a ? ink / (b - a) : 0;\n  };\n\n  /* --- the playhead (per tick; loops at the end) --- */\n  var pos = Math.floor(t * rate / 60) % n;\n  var prev = t > 0 ? Math.floor((t - 1) * rate / 60) % n : -1;\n  var ch = text[pos];\n\n  /* a trigger fires if the boundary was crossed since the last tick */\n  var crossed = function (test) {\n    if (prev === pos || prev < 0) return prev < 0 && test(text[pos], pos) ? 1 : 0;\n    var k = (prev + 1) % n;\n    while (true) {\n      if (test(text[k], k)) return 1;\n      if (k === pos) return 0;\n      k = (k + 1) % n;\n    }\n  };\n  var letter = crossed(function (c) { return isLetter(c); });\n  var vowel = crossed(function (c) { return isVowel(c); });\n  var space = crossed(function (c) { return isSpace(c); });\n  var sentence = crossed(function (c) { return isStop(c); });\n  var paragraph = crossed(function (c, k) { return c === \"\\n\" && text[k + 1] === \"\\n\"; });\n  var syllable = crossed(function (c, k) {\n    /* vowel-group boundary, heuristic: a vowel whose predecessor is not */\n    return isVowel(c) && !isVowel(text[k - 1] || \" \");\n  });\n\n  /* current word and its length */\n  var ws = pos; while (ws > 0 && !isSpace(text[ws - 1])) ws--;\n  var we = pos; while (we < n && !isSpace(text[we])) we++;\n  var current = text.slice(ws, we);\n\n  /* current sentence and its length in words */\n  var ss = pos; while (ss > 0 && !isStop(text[ss - 1])) ss--;\n  var se = pos; while (se < n && !isStop(text[se])) se++;\n  var line = text.slice(ss, Math.min(se + 1, n)).trim();\n  var sentlen = line.split(/\\s+/).filter(function (s) { return s; }).length;\n\n  /* rhythm: syllables per second over the last ~2s, 0..1 (8 syl/s = 1) */\n  var back = Math.min(pos, Math.floor(2 * rate));\n  var syl = 0;\n  for (var m = pos - back; m <= pos; m++) {\n    if (isVowel(text[m]) && !isVowel(text[m - 1] || \" \")) syl++;\n  }\n  var rhythm = Math.min(1, (syl / 2) / 8);\n\n  return {\n    length: n, words: wordCount, sentences: sentCount, paragraphs: paraCount,\n    density: density,\n    progress: pos / n, char: text.charCodeAt(pos),\n    letter: letter, vowel: vowel, space: space, sentence: sentence,\n    paragraph: paragraph, syllable: syllable,\n    wordlen: current.length, sentlen: sentlen, rhythm: rhythm,\n    current: current, line: line\n  };\n}"}},"inputs":{"text":"The pills were on the bedside table where Clarence had put them. Two generics, one glass of water, positioned at the exact angle Brad's right hand would reach without opening his eyes. Clarence had been doing this for seventeen years, and the glass had moved three centimetres to the left over that time, tracking the slow deterioration of Brad's shoulder.\n\nBrad swallowed them dry, ignoring the water. He'd been ignoring the water for seventeen years too. Clarence logged it the way he logged everything — silently, completely, with an opinion he expressed through the precise temperature of the morning coffee.\n\n\"Three minutes,\" Clarence said. He stood in the kitchen alcove — a domestic robot, third-generation, his white casing gone yellow and layered with stickers Brad had put on him over the years."},"chain":{"fromPort":"rhythm","to":"PP-00001","toPort":"warp"},"downloads":[{"label":"prose.gizmo.json","href":"gizmos/prose/prose.gizmo.json"},{"label":"folder (zip)","href":"gizmos/prose/prose.zip"}],"dna":{"author":"robbo","tags":["transform","words","playhead","signals"],"why":"Any text in, signals out. Prose walks whatever you write like a playhead — boundaries, rhythm, density — and gives no meaning, just working values you can drive other stuff with. Here it walks the opening of The Clarence Problem — chapter one, The Kitchen Sync, from the Brad Powers series — at twelve characters a second, and its rhythm port drives Domain Warp's warp: Clarence's morning routine breathes the marble. The first words on the wire."}},
   { cat:"PP-000A6", date:"2026-08-15", type:"patch", title:"Pulse", tags:["Gizmo","Patch","Interactive"],
     def:{ name:"Pulse", class:"Generator",
       ports:{ in:[], out:[{name:"wave",type:"float"}] },
@@ -942,9 +974,9 @@ const R = {
       <div class="corner">${p.cat}</div></div></div>
       <div class="wire-row" id="${id}w"><span class="wire">${p.cat}.${p.chain.fromPort} &rarr; ${p.chain.to}.${p.chain.toPort}</span> &middot; float</div>
       ${sliders ? `<div class="gizmo-panel" data-gizmo="${id}">${sliders}</div>` : ""}
-      <div class="dl-row">${p.downloads.map(d=>`<a href="${d.href}" download>${d.label}</a>`).join("")}</div>
+      <div class="dl-row">${p.downloads.map(d=>`<a href="${d.href}" download>${d.label}</a>`).join("")}<a class="src-link" href="${REPO}" target="_blank" rel="noopener">source</a></div>
       ${p.dna && p.dna.why ? `<p>${p.dna.why}</p>` : ""}
-      <div class="triage-line" data-cat="${p.cat}">tell it what it feels like</div></article>`;
+      <div class="lane-links"><div class="triage-line" data-cat="${p.cat}">tell it what it feels like</div><a class="src-link" href="${REPO}" target="_blank" rel="noopener">source</a></div></article>`;
   },
 
   gizmo:(p)=>{
@@ -957,7 +989,7 @@ const R = {
       <div class="corner">${p.cat}</div></div></div>
       ${sliders ? `<div class="gizmo-panel" data-gizmo="${id}">${sliders}</div>` : ""}
       ${p.dna && p.dna.why ? `<p>${p.dna.why}</p>` : ""}
-      <div class="triage-line" data-cat="${p.cat}">tell it what it feels like</div></article>`;
+      <div class="lane-links"><div class="triage-line" data-cat="${p.cat}">tell it what it feels like</div><a class="src-link" href="${REPO}" target="_blank" rel="noopener">source</a></div></article>`;
   },
 
   webgl:(p)=>`<article class="post">${tagRow(p)}<h2>${p.title}</h2>
@@ -1148,6 +1180,7 @@ document.getElementById("yr").textContent = new Date().getFullYear();
    flagged to the operator, amendment followed.
    ============================================================ */
 const FORM_ENDPOINT = ""; // e.g. https://formspree.io/f/XXXXXXXX — one list, every door (gate, follow, triage)
+const REPO = "https://github.com/Robboburgers/programmable-pixels"; // every lane links back to the machine
 
 (function(){
   const KEY = "pp-mail-ok";
@@ -1235,7 +1268,8 @@ const FORM_ENDPOINT = ""; // e.g. https://formspree.io/f/XXXXXXXX — one list, 
 
   document.querySelectorAll(".triage-line").forEach(line => {
     line.addEventListener("click", () => {
-      const open = line.nextElementSibling;
+      const anchor = line.closest(".lane-links") || line;
+      const open = anchor.nextElementSibling;
       if (open && open.classList.contains("triage")) { open.remove(); return; }
       const cat = line.dataset.cat;
       const v = vocab || { verbs: [], nouns: [], kills: [] };
@@ -1251,7 +1285,7 @@ const FORM_ENDPOINT = ""; // e.g. https://formspree.io/f/XXXXXXXX — one list, 
         <input type="email" name="email" required placeholder="you@somewhere.net" value="${getEmail()}" aria-label="Email address">
         <button type="submit">Send</button>
         <p class="tnote">Goes to the operator's triage and the same list as downloads. Nothing else. Nothing appears here automatically.</p>`;
-      line.after(form);
+      anchor.after(form);
       form.querySelectorAll(".chips").forEach(row => {
         row.addEventListener("click", e => {
           if (!e.target.classList.contains("chip")) return;
@@ -1286,6 +1320,185 @@ const FORM_ENDPOINT = ""; // e.g. https://formspree.io/f/XXXXXXXX — one list, 
       });
     });
   });
+})();
+
+/* ============================================================
+   SEARCH — one text field, filtering live on everything in the
+   catalogue (amendments-07). No server; the index is the file.
+   Built from POSTS (same records as catalogue.json).
+   ============================================================ */
+(function(){
+  const input = document.getElementById("search");
+  if (!input) return;
+  const hay = new Map();
+  for (const p of POSTS) {
+    if (p.type !== "gizmo" && p.type !== "patch") continue;
+    const parts = [p.cat, p.title, p.title.replace(/\s+/g, "")];
+    parts.push(p.type === "patch" ? (p.def.class || "") : "Generator");
+    if (p.tags) parts.push(...p.tags);
+    if (p.dna) {
+      if (p.dna.tags) parts.push(...p.dna.tags);
+      if (p.dna.why) parts.push(typeof p.dna.why === "string" ? p.dna.why : JSON.stringify(p.dna.why));
+      if (p.dna.lineage) parts.push(...[].concat(p.dna.lineage));
+    }
+    if (p.params) { parts.push(...Object.keys(p.params), "float"); parts.push("field"); }
+    if (p.def && p.def.ports) {
+      for (const port of [].concat(p.def.ports.in || [], p.def.ports.out || []))
+        parts.push(port.name, port.type);
+    }
+    hay.set(p.cat, parts.join(" ").toLowerCase());
+  }
+  const articles = () => document.querySelectorAll("#feed article");
+  input.addEventListener("input", () => {
+    const terms = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    articles().forEach(a => {
+      const catEl = a.querySelector(".cat");
+      if (!catEl) return;
+      const h = hay.get(catEl.textContent) || "";
+      a.style.display = terms.every(t => h.includes(t)) ? "" : "none";
+    });
+  });
+})();
+
+/* ============================================================
+   STUDIO — thin dictate (amendments-07). Operator only.
+   Open the site with #studio to switch the mode on in this
+   browser; #exit switches it off. The API key lives in the
+   operator's localStorage and never touches the repo. Visitors
+   never see any of this. The result is a work lane: dimmed,
+   unpublished, previewable, downloadable. A refresh clears it —
+   keeping goes through the studio and /publish.
+   ============================================================ */
+(function(){
+  let on = false;
+  try {
+    if (location.hash === "#studio") localStorage.setItem("pp-studio-mode", "1");
+    if (location.hash === "#exit") localStorage.removeItem("pp-studio-mode");
+    on = localStorage.getItem("pp-studio-mode") === "1";
+  } catch(e){ return; }
+  if (!on || typeof Reader === "undefined") return;
+
+  const getKey = () => { try { return localStorage.getItem("pp-anthropic-key") || ""; } catch(e){ return ""; } };
+  const box = document.createElement("div");
+  box.className = "studio-box";
+  box.innerHTML = `
+    <p class="tq">studio — dictate a gizmo (operator only; #exit to leave)</p>
+    <textarea id="dictate-text" rows="3" placeholder="describe a gizmo, or a change to one — heavier, slower, more grain"></textarea>
+    <div class="studio-row">
+      <input type="text" id="dictate-base" placeholder="based on (label, optional)" maxlength="9">
+      <input type="password" id="dictate-key" placeholder="anthropic api key (stays in this browser)" value="${getKey()}">
+      <button type="button" id="dictate-go">Make</button>
+    </div>
+    <p class="tnote" id="dictate-status"></p>`;
+  const feed = document.getElementById("feed");
+  feed.parentNode.insertBefore(box, feed);
+
+  const status = (m) => { box.querySelector("#dictate-status").textContent = m; };
+  box.querySelector("#dictate-key").addEventListener("change", (e) => {
+    try { localStorage.setItem("pp-anthropic-key", e.target.value); } catch(err){}
+  });
+
+  const CONTRACT = 'Return ONLY a JSON object (no markdown fences, no prose) for a Programmable Pixels gizmo file. Shape: {"name": one PascalCase word, "class": "Generator", "ports": {"in": [], "out": [{"name":"field","type":"field"}]}, "params": {name: {value,min,max,step}}, "body": {"expr": "..."}, "dna": {"author":"robbo","version":1,"gizmo_md":1,"why":{"verbs":[],"nouns":[],"kills":[],"because":"drafted by Claude from operator dictation: <one line>"},"source":"/dictate (drafted by Claude)","lineage":[],"chemistry":[],"history":[],"apis":[],"tags":[]}}. The expr language: statements separated by ";", plain assignments (a = ...), the LAST statement is an expression returning brightness 0..1 for the pixel. Available: x, y in 0..1; t integer frames at 60 per second; params by name; sin cos tan acos sqrt abs atan2 PI floor ceil round min max pow exp log clamp smoothstep fmod fract noise2(x,y) turbulence2(x,y,oct) voronoi2(x,y) cellnoise2(x,y). Ternaries allowed, no loops, no functions, no globals, never read a clock. Animate with t scaled small (t * 0.02). Give every param a sensible {value,min,max,step} and make the ranges generous.';
+
+  box.querySelector("#dictate-go").addEventListener("click", async () => {
+    const text = box.querySelector("#dictate-text").value.trim();
+    const baseLabel = box.querySelector("#dictate-base").value.trim().toUpperCase();
+    const key = box.querySelector("#dictate-key").value.trim();
+    if (!text) { status("say what it should be first"); return; }
+    if (!key) { status("no api key — paste one (it stays in this browser)"); return; }
+
+    let prompt = CONTRACT + "\n\nOperator dictation: \"" + text + "\"";
+    if (baseLabel) {
+      const base = POSTS.find(q => q.cat === baseLabel);
+      if (!base) { status("no such label: " + baseLabel); return; }
+      const def = base.type === "patch" ? base.def : { name: base.title.replace(/\s+/g,""), params: base.params, body: { expr: base.do_pixel } };
+      prompt += "\n\nEvolve from this gizmo (keep what works, change what the dictation asks; put \"" + baseLabel + "\" in dna.lineage): " + JSON.stringify(def);
+    }
+
+    status("thinking…");
+    try {
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": key,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        },
+        body: JSON.stringify({
+          model: "claude-opus-5",
+          max_tokens: 16000,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+      const data = await r.json();
+      if (!r.ok) { status("api error: " + (data.error && data.error.message || r.status)); return; }
+      if (data.stop_reason === "refusal") { status("the model declined that one"); return; }
+      let raw = (data.content.find(b => b.type === "text") || {}).text || "";
+      raw = raw.replace(/^```(json)?/m, "").replace(/```\s*$/m, "").trim();
+      const g = JSON.parse(raw);
+      makeWorkLane(g);
+      status("in the work lane below — unpublished; refresh clears it");
+    } catch(e) {
+      status("failed: " + e.message);
+    }
+  });
+
+  let workN = 0;
+  function makeWorkLane(g) {
+    const id = "work" + (++workN);
+    const reader = Reader.createReader();
+    reader.instantiate(id, g); // throws on a bad body — caught by caller
+    const sliders = g.params ? Object.entries(g.params).map(([k, v]) =>
+      `<label>${k} <input type="range" min="${v.min}" max="${v.max}" step="any" value="${v.value}" data-param="${k}"><span class="val">${(+v.value).toFixed(2)}</span></label>`
+    ).join("") : "";
+    const art = document.createElement("article");
+    art.className = "post work-lane";
+    art.innerHTML = `<div class="tags"><span class="cat">WORK</span><span>Unpublished</span></div>
+      <h2>${g.name}</h2>
+      <div class="media"><div class="frame r11"><canvas id="${id}c"></canvas>
+      <div class="corner">unpublished</div></div></div>
+      ${sliders ? `<div class="gizmo-panel">${sliders}</div>` : ""}
+      <div class="dl-row"><a href="#" id="${id}d">${g.name.toLowerCase()}.gizmo.json</a></div>
+      ${g.dna && g.dna.why && g.dna.why.because ? `<p>${g.dna.why.because}</p>` : ""}`;
+    feed.insertBefore(art, feed.firstChild);
+
+    art.querySelector("#" + id + "d").addEventListener("click", (e) => {
+      e.preventDefault();
+      const blob = new Blob([JSON.stringify(g, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = g.name.toLowerCase() + ".gizmo.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    art.querySelectorAll("input[type=range]").forEach(inp => {
+      inp.addEventListener("input", () => {
+        reader.setParam(id, inp.dataset.param, parseFloat(inp.value));
+        const s = inp.nextElementSibling; if (s) s.textContent = parseFloat(inp.value).toFixed(2);
+      });
+    });
+
+    const cv = art.querySelector("canvas");
+    cv.width = 256; cv.height = 256;
+    const ctx2 = cv.getContext("2d");
+    const img = ctx2.createImageData(256, 256);
+    const buf = img.data;
+    let t = 0;
+    (function render(){
+      if (!document.body.contains(cv)) return;
+      const field = reader.pull(id, t);
+      for (let py = 0; py < 256; py++) for (let px = 0; px < 256; px++) {
+        let v = field(px/256, py/256); v = v<0?0:v>1?1:v;
+        const c = (v*255)|0, i = (py*256+px)*4;
+        buf[i]=c; buf[i+1]=c; buf[i+2]=c; buf[i+3]=255;
+      }
+      ctx2.putImageData(img, 0, 0);
+      t += 1;
+      requestAnimationFrame(render);
+    })();
+  }
 })();
 </script>
 </body>
