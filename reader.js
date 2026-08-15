@@ -130,18 +130,30 @@
     function instantiate(id, def) {
       const params = def.params || {};
       const paramNames = Object.keys(params);
+      const outs = (def.ports && def.ports.out) || [];
       const src = (def.body && (def.body.expr || def.body.do_pixel)) || def.do_pixel;
-      if (!src) throw new Error(id + ": no body");
-      const fn = compile(src, paramNames);
-      const out = (def.ports && def.ports.out && def.ports.out[0]) || null;
+      const codeSrc = (def.body && def.body.code) || def.code;
+      let fn, kind;
+      if (codeSrc) {
+        /* bench-schema code body: a full JS function (params, inputs, t)
+           returning a {port: value} map — the multi-output form */
+        kind = "code";
+        fn = new Function("return (" + codeSrc + ")")();
+      } else if (src) {
+        kind = "expr";
+        fn = compile(src, paramNames);
+      } else {
+        throw new Error(id + ": no body");
+      }
       const values = {};
       for (const k of paramNames) {
         const p = params[k];
         values[k] = p.value !== undefined ? p.value : p.default;
       }
-      nodes.set(id, { id, def, fn, params, paramNames, values,
-                      outName: out ? out.name : "out",
-                      outType: out ? out.type : "float",
+      nodes.set(id, { id, def, fn, kind, params, paramNames, values,
+                      inputValues: {}, outs,
+                      outName: outs[0] ? outs[0].name : "out",
+                      outType: outs[0] ? outs[0].type : "float",
                       cacheT: null, cacheV: null });
       return nodes.get(id);
     }
@@ -172,11 +184,12 @@
     function connect(fromId, fromPort, toId, toPort) {
       const from = nodes.get(fromId), to = nodes.get(toId);
       if (!from || !to) throw new Error("no such gizmo: " + (from ? toId : fromId));
-      if (from.outName !== fromPort) throw new Error(fromId + " has no out port " + fromPort);
+      const outDecl = from.outs.find(p => p.name === fromPort);
+      if (!outDecl) throw new Error(fromId + " has no out port " + fromPort);
       const toType = inPortType(to, toPort);
       if (toType === null) throw new Error(toId + " has no in port " + toPort);
-      if (!TYPE_OK(from.outType, toType))
-        throw new Error("no match: " + from.outType + " ≠ " + toType);
+      if (!TYPE_OK(outDecl.type, toType))
+        throw new Error("no match: " + outDecl.type + " ≠ " + toType);
       const wire = { fromId, fromPort, toId, toPort };
       wires.push(wire);
       return wire;
@@ -193,23 +206,34 @@
       _seen.add(id);
 
       const values = Object.assign({}, node.values);
+      const inputs = Object.assign({}, node.inputValues);
       for (const w of wires) {
         if (w.toId !== id) continue;
-        const v = pull(w.fromId, t, _seen);
+        let v = pull(w.fromId, t, _seen);
+        const fromNode = nodes.get(w.fromId);
+        if (fromNode.kind === "code") v = v[w.fromPort]; // multi-output: pick the port
         const p = node.params[w.toPort];
         if (p && p.min !== undefined && p.max !== undefined) {
           values[w.toPort] = p.min + clamp(v, 0, 1) * (p.max - p.min);
-        } else {
+        } else if (p) {
           values[w.toPort] = v;
+        } else {
+          inputs[w.toPort] = v;
         }
       }
 
-      const pArr = node.paramNames.map(k => values[k]);
       let out;
-      if (node.outType === "field" || node.outType === "visual") {
-        out = (x, y) => node.fn(x, y, t, ...BUILTIN_VALUES, ...pArr);
+      if (node.kind === "code") {
+        const paramObj = {};
+        node.paramNames.forEach(k => { paramObj[k] = values[k]; });
+        out = node.fn(paramObj, inputs, t); // {port: value} map
       } else {
-        out = node.fn(0, 0, t, ...BUILTIN_VALUES, ...pArr);
+        const pArr = node.paramNames.map(k => values[k]);
+        if (node.outType === "field" || node.outType === "visual") {
+          out = (x, y) => node.fn(x, y, t, ...BUILTIN_VALUES, ...pArr);
+        } else {
+          out = node.fn(0, 0, t, ...BUILTIN_VALUES, ...pArr);
+        }
       }
       node.cacheT = t; node.cacheV = out;
       return out;
@@ -220,7 +244,14 @@
       if (node) { node.values[name] = v; node.cacheT = null; }
     }
 
-    return { instantiate, fromPost, connect, pull, setParam, nodes, wires };
+    /* static value on a declared in-port (e.g. Prose.text when nothing
+       is wired into it); a wire on the same port wins per tick */
+    function setInput(id, name, v) {
+      const node = nodes.get(id);
+      if (node) { node.inputValues[name] = v; node.cacheT = null; }
+    }
+
+    return { instantiate, fromPost, connect, pull, setParam, setInput, nodes, wires };
   }
 
   const api = { createReader, compile, BUILTINS, BUILTIN_NAMES, noise2 };

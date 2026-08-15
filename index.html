@@ -196,6 +196,26 @@ footer{
   letter-spacing:.04em; color:var(--grey); }
 .freeline a{ color:var(--ink); }
 
+/* ---- taste triage (tell it what it feels like) ---- */
+.triage-line{ font-family:var(--font-mono); font-size:11px; color:var(--grey);
+  letter-spacing:.04em; padding-top:10px; cursor:pointer; width:fit-content; }
+.triage-line:hover{ color:var(--ink); }
+.triage{ padding:8px 0 4px; }
+.triage .tq{ font-family:var(--font-mono); font-size:10px; color:var(--grey);
+  margin:10px 0 5px; letter-spacing:.06em; text-transform:uppercase; max-width:none; }
+.chips{ display:flex; flex-wrap:wrap; gap:6px; }
+.chip{ font-family:var(--font-mono); font-size:11px; padding:3px 8px;
+  border:1px solid var(--line); background:none; color:var(--grey); cursor:pointer; }
+.chip.on{ border-color:var(--ink); color:var(--ink); }
+.triage input[type=text], .triage input[type=email]{
+  font-family:var(--font-mono); font-size:12px; padding:6px 8px; margin-top:5px;
+  border:1px solid var(--line); background:var(--ground); color:var(--ink); width:100%; }
+.triage button[type=submit]{ margin-top:10px; font-family:var(--font-mono); font-size:11px;
+  text-transform:uppercase; letter-spacing:.06em; padding:6px 12px;
+  border:1px solid var(--ink); background:var(--ink); color:var(--ground); cursor:pointer; }
+.triage .tnote{ font-family:var(--font-mono); font-size:10px; color:var(--grey);
+  margin-top:8px; letter-spacing:.04em; max-width:none; }
+
 /* ---- mail gate (first download) ---- */
 .gate{ padding:10px 0 4px; }
 .gate p{ font-family:var(--font-mono); font-size:11px; color:var(--grey); margin:0 0 8px; letter-spacing:.04em; }
@@ -955,7 +975,8 @@ const R = {
       <div class="wire-row" id="${id}w"><span class="wire">${p.cat}.${p.chain.fromPort} &rarr; ${p.chain.to}.${p.chain.toPort}</span> &middot; float</div>
       ${sliders ? `<div class="gizmo-panel" data-gizmo="${id}">${sliders}</div>` : ""}
       <div class="dl-row">${p.downloads.map(d=>`<a href="${d.href}" download>${d.label}</a>`).join("")}</div>
-      ${p.dna && p.dna.why ? `<p>${p.dna.why}</p>` : ""}</article>`;
+      ${p.dna && p.dna.why ? `<p>${p.dna.why}</p>` : ""}
+      <div class="triage-line" data-cat="${p.cat}">tell it what it feels like</div></article>`;
   },
 
   gizmo:(p)=>{
@@ -967,7 +988,8 @@ const R = {
       <div class="media"><div class="frame r11" id="${id}"><canvas id="${id}c"></canvas>
       <div class="corner">${p.cat}</div></div></div>
       ${sliders ? `<div class="gizmo-panel" data-gizmo="${id}">${sliders}</div>` : ""}
-      ${p.dna && p.dna.why ? `<p>${p.dna.why}</p>` : ""}</article>`;
+      ${p.dna && p.dna.why ? `<p>${p.dna.why}</p>` : ""}
+      <div class="triage-line" data-cat="${p.cat}">tell it what it feels like</div></article>`;
   },
 
   webgl:(p)=>`<article class="post">${tagRow(p)}<h2>${p.title}</h2>
@@ -1156,11 +1178,15 @@ document.getElementById("yr").textContent = new Date().getFullYear();
    amendments-03 requires and the CLAUDE.md design rules forbid —
    flagged to the operator, amendment followed.
    ============================================================ */
+const FORM_ENDPOINT = ""; // e.g. https://formspree.io/f/XXXXXXXX — one list, every door (gate, follow, triage)
+
 (function(){
-  const FORM_ENDPOINT = ""; // e.g. https://formspree.io/f/XXXXXXXX
   const KEY = "pp-mail-ok";
   const seen = () => { try { return localStorage.getItem(KEY) === "1"; } catch(e){ return true; } };
-  const mark = () => { try { localStorage.setItem(KEY, "1"); } catch(e){} };
+  const mark = (email) => { try {
+    localStorage.setItem(KEY, "1");
+    if (email) localStorage.setItem("pp-mail-addr", email);
+  } catch(e){} };
 
   function send(email, gizmo){
     if (!FORM_ENDPOINT) return Promise.resolve(false);
@@ -1178,7 +1204,7 @@ document.getElementById("yr").textContent = new Date().getFullYear();
     e.preventDefault();
     const email = lockform.querySelector("input[type=email]").value;
     send(email, "PP-002").then(sent => {
-      mark();
+      mark(email);
       document.getElementById("lockmsg").textContent =
         sent ? "Done — you're on the list." : "Noted — mail service not wired yet.";
     });
@@ -1205,7 +1231,7 @@ document.getElementById("yr").textContent = new Date().getFullYear();
         ev.preventDefault();
         const email = gate.querySelector("input").value;
         send(email, cat).then(() => {
-          mark();
+          mark(email);
           gate.remove();
           const tmp = document.createElement("a");
           tmp.href = a.getAttribute("href");
@@ -1214,6 +1240,81 @@ document.getElementById("yr").textContent = new Date().getFullYear();
         });
       });
       gate.querySelector("input").focus();
+    });
+  });
+})();
+
+/* ============================================================
+   TASTE TRIAGE — tell it what it feels like (amendments-04).
+   Not comments: verbs, nouns, one kill, one because — the same
+   walk as the operator's own taste triage, small. Posts to the
+   same list as the mail gate with type=triage. Nothing appears
+   on the site automatically; the operator triages the triages.
+   ============================================================ */
+(function(){
+  let vocab = null;
+  fetch("vocabulary.json").then(r => r.json()).then(v => { vocab = v; }).catch(() => {});
+  const getEmail = () => { try { return localStorage.getItem("pp-mail-addr") || ""; } catch(e){ return ""; } };
+  const remember = (email) => { try {
+    localStorage.setItem("pp-mail-ok", "1");
+    if (email) localStorage.setItem("pp-mail-addr", email);
+  } catch(e){} };
+
+  const chiprow = (name, list, max) =>
+    `<div class="chips" data-name="${name}" data-max="${max}">${
+      (list || []).map(w => `<button type="button" class="chip">${w}</button>`).join("")}</div>`;
+
+  document.querySelectorAll(".triage-line").forEach(line => {
+    line.addEventListener("click", () => {
+      const open = line.nextElementSibling;
+      if (open && open.classList.contains("triage")) { open.remove(); return; }
+      const cat = line.dataset.cat;
+      const v = vocab || { verbs: [], nouns: [], kills: [] };
+      const form = document.createElement("form");
+      form.className = "triage";
+      form.innerHTML = `
+        <p class="tq">verbs — up to three</p>${chiprow("verbs", v.verbs, 3)}
+        <p class="tq">nouns — up to three, or type one</p>${chiprow("nouns", v.nouns, 3)}
+        <input type="text" name="noun_new" maxlength="24" placeholder="a noun of your own">
+        <p class="tq">kill — optional, one</p>${chiprow("kills", v.kills, 1)}
+        <p class="tq">because — your own words</p>
+        <input type="text" name="because" maxlength="140" required placeholder="one line, 140 characters">
+        <input type="email" name="email" required placeholder="you@somewhere.net" value="${getEmail()}" aria-label="Email address">
+        <button type="submit">Send</button>
+        <p class="tnote">Goes to the operator's triage and the same list as downloads. Nothing else. Nothing appears here automatically.</p>`;
+      line.after(form);
+      form.querySelectorAll(".chips").forEach(row => {
+        row.addEventListener("click", e => {
+          if (!e.target.classList.contains("chip")) return;
+          if (e.target.classList.contains("on")) { e.target.classList.remove("on"); return; }
+          if (row.querySelectorAll(".chip.on").length < +row.dataset.max) e.target.classList.add("on");
+        });
+      });
+      form.addEventListener("submit", e => {
+        e.preventDefault();
+        const pick = name => [...form.querySelectorAll(`.chips[data-name="${name}"] .chip.on`)].map(b => b.textContent);
+        const nouns = pick("nouns");
+        const nn = form.noun_new.value.trim();
+        if (nn) nouns.push(nn);
+        const email = form.email.value;
+        const data = new FormData();
+        data.append("type", "triage");
+        data.append("gizmo", cat);
+        data.append("verbs", pick("verbs").join(" "));
+        data.append("nouns", nouns.slice(0, 3).join(" "));
+        data.append("kill", pick("kills").join(""));
+        data.append("because", form.because.value);
+        data.append("email", email);
+        data.append("date", new Date().toISOString().slice(0, 10));
+        const done = () => {
+          remember(email);
+          form.innerHTML = `<p class="tnote">kept for the operator's triage — thank you</p>`;
+        };
+        if (FORM_ENDPOINT) {
+          fetch(FORM_ENDPOINT, { method: "POST", body: data, headers: { Accept: "application/json" } })
+            .then(done).catch(done);
+        } else done();
+      });
     });
   });
 })();

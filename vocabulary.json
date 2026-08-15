@@ -1,0 +1,14 @@
+{
+  "note": "Seed list, 15 August 2026. Sources: gizmo DNA already in the catalogue (Pulse, Prose), the operator's taste vocabulary (motion tags, verbatim), and brief-prose.md. The gate from the taste system applies: new words are proposed to the operator, never silently added. Typed nouns from triage arrive as candidates for this table.",
+  "verbs": [
+    "breathe", "drive", "pulse", "sequence", "perform",
+    "orbital", "breathing", "directional", "differential", "entropy", "flocking"
+  ],
+  "nouns": [
+    "wave", "signal", "clock", "playhead", "text",
+    "field", "grid", "pattern", "noise", "tile", "spiral", "particle"
+  ],
+  "kills": [
+    "static", "screensaver", "sluggish", "clutter"
+  ]
+}
