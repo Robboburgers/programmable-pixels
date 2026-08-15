@@ -16,8 +16,8 @@ A gizmo is published by adding its folder under `gizmos/<name>/`
 
 ## What lives here
 
-`index.html`, `reader.js`, `GIZMO.md`, `manifesto.md` (+ the rendered
-pages), `api.md`, `catalogue.json`, `vocabulary.json`,
+`index.html`, `canvas.html`, `reader.js`, `GIZMO.md`, `manifesto.md`
+(+ the rendered pages), `api.md`, `catalogue.json`, `vocabulary.json`,
 `gizmos/<name>/`. Nothing else. This repo has no studio — no tools,
 no drafts, no process. Bring your own; the reader is free and so is
 everything in it.
