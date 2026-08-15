@@ -1,0 +1,35 @@
+{
+  "name": "Pulse",
+  "class": "Generator",
+  "ports": {
+    "in": [],
+    "out": [{ "name": "wave", "type": "float" }]
+  },
+  "params": {
+    "rate": { "value": 0.05, "min": 0.005, "max": 0.3, "step": 0.005 }
+  },
+  "body": {
+    "expr": "0.5 + 0.5 * sin(t * rate)"
+  },
+  "dna": {
+    "id": "sha256:36609cd437d55dec",
+    "label": "PP-0BD",
+    "author": "robbo",
+    "version": 1,
+    "gizmo_md": 1,
+    "why": {
+      "verbs": ["pulse", "drive", "breathe"],
+      "nouns": ["wave", "signal", "clock"],
+      "kills": ["static", "screensaver"],
+      "because": "is working gizmo that is connectable, downloadable, published on the programmable pixels website."
+    },
+    "source": "operator dictation, 15 August 2026 (/goal)",
+    "lineage": [],
+    "chemistry": ["DomainWarp", "Chladni", "PlasmaField"],
+    "history": [
+      { "id": "sha256:f7017fd5b5d61578", "patch": "PP-0BD.wave -> PP-018.warp", "when": "2026-08-15" }
+    ],
+    "apis": [],
+    "tags": ["generator", "float", "lfo", "time", "first-connectable"]
+  }
+}

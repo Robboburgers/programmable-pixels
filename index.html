@@ -150,6 +150,36 @@ footer{
   .live .dot{ animation:none; }
   .wave span{ transition:none; }
 }
+
+/* ---- gizmo (interactive per-pixel art) ---- */
+.frame.r11{ aspect-ratio:1/1; }
+.gizmo-panel{
+  padding:12px 0 4px; display:flex; flex-wrap:wrap; gap:8px 18px;
+}
+.gizmo-panel label{
+  font-family:var(--font-mono); font-size:11px; color:var(--grey);
+  display:flex; align-items:center; gap:8px; letter-spacing:.04em;
+  text-transform:uppercase; white-space:nowrap;
+}
+.gizmo-panel input[type=range]{
+  width:90px; accent-color:var(--ink);
+}
+.gizmo-panel .val{
+  min-width:32px; text-align:right; font-variant-numeric:tabular-nums;
+}
+
+/* ---- patch (gizmos wired through the reader) ---- */
+.wire-row{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.04em;
+  color:var(--grey); padding:12px 0 0; text-transform:uppercase;
+}
+.wire-row .wire{ color:var(--ink); }
+.dl-row{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.04em;
+  padding:10px 0 4px; display:flex; gap:18px;
+}
+.dl-row a{ color:var(--ink); text-decoration:none; border-bottom:1px solid var(--line); }
+.dl-row a:hover{ border-bottom-color:var(--ink); }
 </style>
 </head>
 <body>
@@ -166,6 +196,7 @@ footer{
   © <span id="yr"></span>
 </footer>
 
+<script src="reader.js"></script>
 <script>
 /* ============================================================
    THE FEED IS A LIST. Publish = append one object.
@@ -178,10 +209,714 @@ footer{
    - `date` is the day it entered the catalogue. Both are immutable.
    ============================================================ */
 const POSTS = [
+  { cat:"PP-0BD", date:"2026-08-15", type:"patch", title:"Pulse", tags:["Gizmo","Patch","Interactive"],
+    def:{ name:"Pulse", class:"Generator",
+      ports:{ in:[], out:[{name:"wave",type:"float"}] },
+      params:{ rate:{value:0.05,min:0.005,max:0.3,step:0.005} },
+      body:{ expr:"0.5 + 0.5 * sin(t * rate)" } },
+    chain:{ fromPort:"wave", to:"PP-018", toPort:"warp" },
+    downloads:[ {label:"pulse.gizmo.json", href:"gizmos/pulse/pulse.gizmo.json"},
+                {label:"folder (zip)", href:"assets/pp-0bd.zip"} ],
+    dna:{ author:"robbo", tags:["lfo","float","first-connectable"],
+      why:"The first connectable gizmo in the catalogue. A slow sine on a float port — the LFO of every synthesizer. Its wave out-port is wired through the reader into Domain Warp's warp param: the 165 pieces below are fields waiting for signals; this is the first signal. Download the JSON for the gizmo alone, or the folder for its DNA and its reasons." } },
+  { cat:"PP-01D", date:"2026-08-14", type:"gizmo", title:"Spirograph", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x - 0.5; py = y - 0.5; total = 0.0; i = 0.0; i = i + 1.0; freq = i * density / arms; total = total + (0.5 + 0.5 * cos(px * freq + t * 0.03 * i)) * (0.5 + 0.5 * sin(py * freq * ratio + t * 0.02 * i)); i = i + 1.0; freq = i * density / arms; total = total + (0.5 + 0.5 * cos(px * freq + t * 0.03 * i)) * (0.5 + 0.5 * sin(py * freq * ratio + t * 0.02 * i)); i = i + 1.0; freq = i * density / arms; total = total + (0.5 + 0.5 * cos(px * freq + t * 0.03 * i)) * (0.5 + 0.5 * sin(py * freq * ratio + t * 0.02 * i)); i = i + 1.0; freq = i * density / arms; total = total + (0.5 + 0.5 * cos(px * freq + t * 0.03 * i)) * (0.5 + 0.5 * sin(py * freq * ratio + t * 0.02 * i)); i = i + 1.0; freq = i * density / arms; total = total + (0.5 + 0.5 * cos(px * freq + t * 0.03 * i)) * (0.5 + 0.5 * sin(py * freq * ratio + t * 0.02 * i)); clamp(total / arms, 0.0, 1.0)",
+    params:{ arms:{value:5,min:2,max:12}, ratio:{value:0.4,min:0.1,max:2.0}, density:{value:200,min:10,max:500} },
+    dna:{ author:"makers-factory", tags:["spirograph","envelope","harmonic"], why:"Line-envelope style \u2014 sum of counter-rotating sine/cosine pairs. From the envelope family." } },
+  { cat:"PP-01C", date:"2026-08-14", type:"gizmo", title:"Moire Rings", tags:["Gizmo","Interactive"],
+    do_pixel:"dx1 = x - 0.5; dy1 = y - 0.5; d1 = sqrt(dx1 * dx1 + dy1 * dy1); dx2 = x - 0.5 - offset; dy2 = y - 0.5; d2 = sqrt(dx2 * dx2 + dy2 * dy2); w1 = 0.5 + 0.5 * sin(d1 * freq1 * 6.28318 + t * 0.05); w2 = 0.5 + 0.5 * sin(d2 * freq2 * 6.28318 + t * 0.07); w1 * w2",
+    params:{ freq1:{value:30,min:5,max:100}, freq2:{value:31,min:5,max:100}, offset:{value:0.1,min:0,max:0.5} },
+    dna:{ author:"makers-factory", tags:["moire","interference","rings"], why:"Two sets of concentric rings offset from each other \u2014 interference creates moire." } },
+  { cat:"PP-01B", date:"2026-08-14", type:"gizmo", title:"Curl Noise", tags:["Gizmo","Interactive"],
+    do_pixel:"eps = 0.005; px = x * scale + t * drift; py = y * scale; nr = noise2(px + eps, py); nl = noise2(px - eps, py); nu = noise2(px, py + eps); nd = noise2(px, py - eps); vx = nu - nd; vy = -(nr - nl); angle = atan2(vy, vx); 0.5 + 0.5 * sin(angle * bands + t * speed)",
+    params:{ scale:{value:3,min:0.5,max:15}, bands:{value:3,min:1,max:10}, speed:{value:0.5,min:0,max:3}, drift:{value:0.01,min:0,max:0.2} },
+    dna:{ author:"makers-factory", tags:["curl","flow","noise"], why:"Curl noise: treats scalar noise as a stream function, visualizes flow direction via atan2. From computational fluid dynamics." } },
+  { cat:"PP-01A", date:"2026-08-14", type:"gizmo", title:"Chladni", tags:["Gizmo","Interactive"],
+    do_pixel:"z = sin(mode_n * 3.14159 * x) * sin(mode_m * 3.14159 * y + t * morph) - sin(mode_m * 3.14159 * x) * sin(mode_n * 3.14159 * y + t * morph); clamp(1.0 - abs(z) / thresh, 0.0, 1.0)",
+    params:{ mode_n:{value:3,min:1,max:12}, mode_m:{value:5,min:1,max:12}, thresh:{value:0.15,min:0.01,max:0.5}, morph:{value:0.01,min:0,max:0.5} },
+    dna:{ author:"makers-factory", tags:["chladni","vibration","physics"], why:"Chladni plate vibration patterns. Sand gathers at the nodal lines where z = 0. Mode numbers control the star count." } },
+  { cat:"PP-019", date:"2026-08-14", type:"gizmo", title:"Plasma Field", tags:["Gizmo","Interactive"],
+    do_pixel:"v1 = sin(x * scale1 * 6.28318 + t * speed); v2 = sin(y * scale2 * 6.28318 + t * speed * 1.3); v3 = sin((x + y) * (scale1 + scale2) * 0.5 * 6.28318 + t * speed * 0.7); dx = x - 0.5; dy = y - 0.5; v4 = sin(sqrt(dx * dx + dy * dy) * (scale1 + scale2) * 6.28318 + t * speed * 1.1); 0.5 + 0.5 * (v1 + v2 + v3 + v4) * 0.25",
+    params:{ scale1:{value:3,min:0.5,max:15}, scale2:{value:5,min:0.5,max:15}, speed:{value:0.03,min:0,max:0.5} },
+    dna:{ author:"makers-factory", tags:["plasma","demoscene","sine"], why:"Classic plasma: sum of sines at different scales and angles. Demoscene lineage." } },
+  { cat:"PP-018", date:"2026-08-14", type:"gizmo", title:"Domain Warp", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale; qx = noise2(px + t * speed, py); qy = noise2(px + 5.2, py + 1.3); rx = noise2(px + warp * qx + 1.7, py + warp * qy + 9.2); ry = noise2(px + warp * qx + 8.3, py + warp * qy + 2.8); 0.5 + 0.5 * noise2(px + warp * rx, py + warp * ry)",
+    params:{ scale:{value:3,min:0.5,max:20}, warp:{value:4,min:0,max:16}, speed:{value:0.02,min:0,max:0.5} },
+    dna:{ author:"makers-factory", tags:["noise","warp","domain-warp","liquid","marble"], why:"Domain warping \u2014 warp 1 is the glass, warp 2 is the body under the glass. Liquid, marble, smoke." } },
+{ cat:"PP-01E", date:"2026-08-15", type:"gizmo", title:"Arc", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = y - 0.5; sx = sin(angle * 0.5); cy = cos(angle * 0.5); ex = px - sx * radius; ey = py - cy * radius; d1 = sqrt(ex * ex + ey * ey); d2 = abs(sqrt(px * px + py * py) - radius); d = (cy * px > sx * py ? d1 : d2) - thick; smoothstep(blur, 0.0, d)",
+    params:{radius:{value:0.25,min:0.05,max:0.45},angle:{value:3.14,min:0.3,max:6},thick:{value:0.03,min:0.005,max:0.1},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","arc","ring","segment"], why:"Inigo Quilez 2D SDF — arc (ring segment). A curved stroke: radius sets the sweep, angle sets the angular extent, thick inflates the centreline into a band. Outside the angular range, distance falls to the nearest endpoint cap. Pie fills a sector; Arc traces its rim. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-01F", date:"2026-08-15", type:"gizmo", title:"Basketweave", tags:["Gizmo","Interactive"],
+    do_pixel:"sx = x * scale; sy = y * scale; cx = floor(sx); cy = floor(sy); fx = sx - cx; fy = sy - cy; parity = (cx + cy) - floor((cx + cy) * 0.5) * 2.0; bx = smoothstep(0.0, gap, fx) * smoothstep(0.0, gap, 1.0 - fx); by = smoothstep(0.0, gap, fy) * smoothstep(0.0, gap, 1.0 - fy); inner = parity > 0.5 ? smoothstep(0.0, gap, abs(fy - 0.5)) : smoothstep(0.0, gap, abs(fx - 0.5)); bx * by * inner",
+    params:{scale:{value:6,min:2,max:20},gap:{value:0.06,min:0.01,max:0.2}},
+    dna:{ author:"makers-factory", tags:["pattern","tile","basketweave","parquet","woven"], why:"Basketweave tile pattern — alternating cells split horizontally or vertically based on checkerboard parity. Cell boundaries give the outer mortar, inner split gives the brick subdivisions. The parquet floor and woven textile share this bone structure. Distinct from BrickTile (offset rows) and WovenGrid (sinusoidal). Source: Book of Shaders pattern chapter, adapted to tile-parity logic." } },
+  { cat:"PP-020", date:"2026-08-15", type:"gizmo", title:"Beat Alias", tags:["Gizmo","Interactive"],
+    do_pixel:"qx = floor(x * samples) / samples; wave = sin(qx * carrier + y * ymod) * cos(qx * detune + t * speed); 0.5 + 0.5 * wave",
+    params:{samples:{value:30,min:5,max:100},carrier:{value:40,min:10,max:200},detune:{value:42,min:10,max:200},ymod:{value:10,min:0,max:50},speed:{value:0.1,min:0,max:2}},
+    dna:{ author:"makers-factory", tags:["pattern","alias","beat","sampling","moire","animated"], why:"Deliberately undersampled sine from t06_245 beat-frequency taste. Two frequencies (carrier and detune) sampled at a third rate. The aliasing IS the pattern — Nyquist violations as design material. The beat frequency emerges where carrier and detune drift apart." } },
+  { cat:"PP-021", date:"2026-08-15", type:"gizmo", title:"Bevel Tile", tags:["Gizmo","Interactive"],
+    do_pixel:"gx = floor(x * cols); gy = floor(y * rows); fx = x * cols - gx; fy = y * rows - gy; gate = sin(gx * wfreq - gy + t * speed) > 0.0 ? 1.0 : 0.0; face = 0.5 + (fx < bw ? 0.3 : 0.0) + (fy < bw ? 0.3 : 0.0) - (fx > 1.0 - bw ? 0.3 : 0.0) - (fy > 1.0 - bw ? 0.3 : 0.0); face * gate",
+    params:{cols:{value:8,min:3,max:20},rows:{value:8,min:3,max:20},bw:{value:0.15,min:0.05,max:0.35},wfreq:{value:1,min:0.2,max:5},speed:{value:0.05,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","grid","bevel","tile","3d-illusion","animated"], why:"Beveled tiles with plane-wave gate from t06_236. Three-rect bevel per cell — highlight on left/top edges, shadow on right/bottom, flat face between. The wave gate selects which tiles are lit. 'Shiny Maya stuff with no light in the code' — the bevel IS the light." } },
+  { cat:"PP-022", date:"2026-08-15", type:"gizmo", title:"Bezier", tags:["Gizmo","Interactive"],
+    do_pixel:"p0x = -bspan; p0y = -bcurve; p1x = 0.0; p1y = bcurve; p2x = bspan; p2y = -bcurve; ppx = x - 0.5; ppy = y - 0.5; aax = p1x - p0x; aay = p1y - p0y; bbx = p0x - 2.0 * p1x + p2x; bby = p0y - 2.0 * p1y + p2y; ccx = aax * 2.0; ccy = aay * 2.0; ddx = p0x - ppx; ddy = p0y - ppy; kk = 1.0 / (bbx * bbx + bby * bby + 0.000000001); kx = kk * (aax * bbx + aay * bby); ky = kk * (2.0 * (aax * aax + aay * aay) + ddx * bbx + ddy * bby) / 3.0; kz = kk * (ddx * aax + ddy * aay); ppp = ky - kx * kx; p3 = ppp * ppp * ppp; qqq = kx * (2.0 * kx * kx - 3.0 * ky) + kz; hhh = qqq * qqq + 4.0 * p3; sh = sqrt(max(abs(hhh), 0.0)); ux_raw = (sh - qqq) / 2.0; vx_raw = (-sh - qqq) / 2.0; ux_sgn = ux_raw > 0.0 ? 1.0 : -1.0; vx_sgn = vx_raw > 0.0 ? 1.0 : -1.0; ux = ux_sgn * pow(max(abs(ux_raw), 0.000000001), 0.333333333); vx = vx_sgn * pow(max(abs(vx_raw), 0.000000001), 0.333333333); t1 = clamp(ux + vx - kx, 0.0, 1.0); e1x = ddx + (ccx + bbx * t1) * t1; e1y = ddy + (ccy + bby * t1) * t1; res1 = e1x * e1x + e1y * e1y; zz = sqrt(max(-ppp, 0.000000001)); vvv = acos(clamp(qqq / (ppp * zz * 2.0 + 0.000000001), -1.0, 1.0)) / 3.0; mm = cos(vvv); nn = sin(vvv) * 1.732050808; ta = clamp((mm + mm) * zz - kx, 0.0, 1.0); tb2 = clamp((-nn - mm) * zz - kx, 0.0, 1.0); ea1x = ddx + (ccx + bbx * ta) * ta; ea1y = ddy + (ccy + bby * ta) * ta; ra1 = ea1x * ea1x + ea1y * ea1y; ea2x = ddx + (ccx + bbx * tb2) * tb2; ea2y = ddy + (ccy + bby * tb2) * tb2; ra2 = ea2x * ea2x + ea2y * ea2y; res2 = min(ra1, ra2); res = hhh > 0.0 ? res1 : res2; d = sqrt(max(res, 0.0)) - bthick; smoothstep(blur, 0.0, d)",
+    params:{bspan:{value:0.2,min:0.05,max:0.4},bcurve:{value:0.15,min:0.02,max:0.35},bthick:{value:0.01,min:0.002,max:0.05},blur:{value:0.005,min:0.001,max:0.05}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","bezier","curve","spline"], why:"Inigo Quilez 2D SDF — quadratic Bezier curve. Three control points define a parabolic arc; the closest point is found by solving a depressed cubic. The bspan parameter sets horizontal spread, bcurve the vertical sag, bthick adds stroke width. Parameterized as a symmetric S-curve for composability. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-023", date:"2026-08-15", type:"gizmo", title:"Blobby Cross", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = abs(y - 0.5); ax = abs(px - py) * 0.70710678; ay = (1.0 - px - py) * 0.70710678; pp = (bhe - ay - 0.25 / bhe) / (6.0 * bhe); qq = ax / (bhe * bhe * 16.0); hh = qq * qq - pp * pp * pp; rr = sqrt(max(hh, 0.0)); cb1 = pow(max(qq + rr, 0.000000001), 0.333333333); qmr = abs(qq - rr); cb2 = pow(max(qmr, 0.000000001), 0.333333333); sgn_qr = rr > qq ? 1.0 : -1.0; x1 = cb1 - cb2 * sgn_qr; r2 = sqrt(max(pp, 0.000000001)); pr = pp * r2; aarg = clamp(qq / (abs(pr) > 0.000000001 ? pr : 0.000000001), -1.0, 1.0); x2 = 2.0 * r2 * cos(acos(aarg) / 3.0); xf = hh > 0.0 ? x1 : x2; xf = min(xf, 0.70710678); zx = xf - ax; zy = bhe * (1.0 - 2.0 * xf * xf) - ay; d = sqrt(zx * zx + zy * zy) * (zy > 0.0 ? 1.0 : -1.0); smoothstep(blur, 0.0, d)",
+    params:{bhe:{value:0.5,min:0.1,max:1},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","blobby","cross","organic"], why:"Inigo Quilez 2D SDF — blobby cross. A soft, organic four-lobed shape. Rotates coordinates 45 degrees, then solves a depressed cubic (Cardano + trig) to find the closest point on the implicit curve y = he*(1-2x^2). The bhe parameter controls blobbiness. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-024", date:"2026-08-15", type:"gizmo", title:"Bounce Grad", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; d = sqrt(dx * dx + dy * dy) * scale; abs(sin(d * 3.14159 * bounces)) * pow(2.71828, 0.0 - d * decay)",
+    params:{scale:{value:3,min:1,max:10},bounces:{value:3,min:1,max:10},decay:{value:1.5,min:0.1,max:5}},
+    dna:{ author:"makers-factory", tags:["gradient","bounce","easing","radial","decay"], why:"Bouncing-ball spatial gradient: abs(sin) gives the bounce oscillation, exp(-d) gives the decay envelope. Together they model a ball bouncing with decreasing height — applied radially from centre. The bounces param controls oscillation frequency, decay controls how quickly the amplitude dies off. Mined from LYGIA animation/easing bounce-out function, applied spatially." } },
+  { cat:"PP-025", date:"2026-08-15", type:"gizmo", title:"Box", tags:["Gizmo","Interactive"],
+    do_pixel:"qx = abs(x - 0.5) - bx; qy = abs(y - 0.5) - by; mx = max(qx, 0.0); my = max(qy, 0.0); d = sqrt(mx * mx + my * my) + min(max(qx, qy), 0.0); smoothstep(blur, 0.0, d)",
+    params:{bx:{value:0.2,min:0.03,max:0.48},by:{value:0.15,min:0.03,max:0.48},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","box","rectangle"], why:"Inigo Quilez 2D SDF — axis-aligned box. The fundamental rectangle SDF: abs for symmetry, max for interior distance, Euclidean for exterior corners. Every UI element starts here. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-026", date:"2026-08-15", type:"gizmo", title:"Breathing Ring", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; d = sqrt(dx * dx + dy * dy); a = atan2(dy, dx); r_pulse = base_radius + pulse * sin(t * speed * 6.28318); thick_vary = 0.015 + 0.01 * sin(a * segments + t * speed * 3.0); ring = 1.0 - abs(d - r_pulse) / thick_vary; clamp(ring, 0.0, 1.0)",
+    params:{base_radius:{value:0.3,min:0.05,max:0.45},pulse:{value:0.05,min:0,max:0.2},segments:{value:8,min:1,max:24},speed:{value:0.05,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","ring","pulse","breathing","organic","animated"], why:"Ring that pulses in radius with sine modulation, thickness varies around the perimeter. From t06 ring/pulse patterns." } },
+  { cat:"PP-027", date:"2026-08-15", type:"gizmo", title:"Brick Tile", tags:["Gizmo","Interactive"],
+    do_pixel:"row = floor(y * rows); shift = (row - floor(row * 0.5) * 2) * 0.5; bx = x * cols + shift; fx = bx - floor(bx); fy = y * rows - row; mx = smoothstep(0.0, gap, fx) * smoothstep(0.0, gap, 1.0 - fx); my = smoothstep(0.0, gap, fy) * smoothstep(0.0, gap, 1.0 - fy); mx * my",
+    params:{cols:{value:8,min:2,max:20},rows:{value:4,min:2,max:20},gap:{value:0.05,min:0.01,max:0.2}},
+    dna:{ author:"makers-factory", tags:["pattern","tile","brick","offset-row"], why:"Offset-row tiling: odd rows shift by half a brick width. Smoothstep mortar lines give soft-edged joints. The ur-pattern of architectural texture — from Book of Shaders pattern chapter. Every brick wall is this equation plus noise." } },
+  { cat:"PP-028", date:"2026-08-15", type:"gizmo", title:"Caustic Light", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale; c1 = 0.5 + 0.5 * sin(px * 3.14159 + sin(py * 2.7 + t * speed) * 2.0); c2 = 0.5 + 0.5 * sin(py * 2.5 + sin(px * 3.1 + t * speed * 1.3) * 2.0); c3 = 0.5 + 0.5 * sin((px + py) * 2.0 + sin((px - py) * 1.8 + t * speed * 0.7) * 2.0); v = (c1 + c2 + c3) / layers; pow(v, 2.0)",
+    params:{scale:{value:3,min:0.5,max:15},layers:{value:3,min:1,max:6},speed:{value:0.02,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","caustic","light","water","refraction","animated"], why:"Overlapping refracted light rings simulating underwater caustics. From t06_026 caustic readings." } },
+  { cat:"PP-029", date:"2026-08-15", type:"gizmo", title:"Cell Noise", tags:["Gizmo","Interactive"],
+    do_pixel:"voronoi2(x * scale + t * drift, y * scale, 1, jitter)",
+    params:{scale:{value:8,min:1,max:50},jitter:{value:0.8,min:0,max:1},drift:{value:0.01,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["noise","voronoi","cellular","animated"], why:"Voronoi cellular noise — the four-channel cell. st_007 in taste_07. F1 is blobs, F2-F1 is borders, cell ID is crystals in a metal. Jitter 0 snaps to hexagons, 1 is organic." } },
+  { cat:"PP-02A", date:"2026-08-15", type:"gizmo", title:"Cellular Tile", tags:["Gizmo","Interactive"],
+    do_pixel:"cx = floor(x * cells); cy = floor(y * cells); fx = x * cells - cx; fy = y * cells - cy; brightness = cellnoise2(cx, cy); half = shape_size * 0.5; inside = (abs(fx - 0.5) < half && abs(fy - 0.5) < half) ? 1.0 : 0.0; inside * brightness",
+    params:{cells:{value:8,min:2,max:32},shape_size:{value:0.6,min:0.1,max:1}},
+    dna:{ author:"makers-factory", tags:["pattern","cellular","tile","grid","random"], why:"fract/floor tiling with per-cell random brightness from cellnoise. Cell size is the room, shape size is the tenant. From st_003/st_009 in taste_07." } },
+  { cat:"PP-02B", date:"2026-08-15", type:"gizmo", title:"Chamfer Box", tags:["Gizmo","Interactive"],
+    do_pixel:"qx = abs(x - 0.5) - bx; qy = abs(y - 0.5) - by; spx = qy > qx ? qy : qx; spy = qy > qx ? qx : qy; spy = spy + chamfer; k = -0.414214; d = (spy < 0.0 && spy + spx * k < 0.0) ? spx : ((spx < spy) ? (spx + spy) * 0.707107 : sqrt(spx * spx + spy * spy)); smoothstep(blur, 0.0, d)",
+    params:{bx:{value:0.2,min:0.03,max:0.45},by:{value:0.15,min:0.03,max:0.45},chamfer:{value:0.05,min:0,max:0.2},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","box","chamfer","beveled"], why:"Inigo Quilez 2D SDF — chamfered box. A rectangle with the corners cut at 45 degrees. Chamfer controls how much of each corner is removed (0 = sharp rectangle, larger = more cut). The frame, the gem, the machined edge. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-02C", date:"2026-08-15", type:"gizmo", title:"Checker", tags:["Gizmo","Interactive"],
+    do_pixel:"a = floor(x * cols); b = floor(y * rows); (a + b) % 2",
+    params:{cols:{value:8,min:1,max:64},rows:{value:8,min:1,max:64}},
+    dna:{ author:"makers-factory", tags:["pattern","grid","checker"], why:"Pipeline proof: simplest per-pixel pattern. From st_009 fract/floor in taste_07." } },
+  { cat:"PP-02D", date:"2026-08-15", type:"gizmo", title:"Chirp Wave", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; d = sqrt(dx * dx + dy * dy); fade = pow(2.71828, -d * decay); v = sin(d * d * freq - t * speed) * fade; clamp(0.5 + 0.5 * v, 0.0, 1.0)",
+    params:{freq:{value:40,min:5,max:120},decay:{value:5,min:1,max:15},speed:{value:0.1,min:0,max:1}},
+    dna:{ author:"makers-factory", tags:["pattern","chirp","radial","frequency-ramp","animated"], why:"Chirp wave from t06_183 jellyfish taste — sin(d^2) makes spatial frequency increase with distance from centre. Tight rings at the rim, broad pulse at the core. The radar sweep, the water drop, the sonar ping." } },
+  { cat:"PP-02E", date:"2026-08-15", type:"gizmo", title:"Circle", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x - 0.5; py = y - 0.5; d = sqrt(px * px + py * py) - radius; smoothstep(blur, 0.0, d)",
+    params:{radius:{value:0.25,min:0.02,max:0.49},blur:{value:0.01,min:0.001,max:0.2}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","circle","disk"], why:"Inigo Quilez 2D SDF — circle. length(p) - r. The simplest possible SDF and the atom of the entire shape library. Every other shape is this one deformed. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-02F", date:"2026-08-15", type:"gizmo", title:"Circle Wave", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x - 0.5; py = y - 0.5; tb2 = 3.1415927 * 5.0 / 6.0 * max(tb, 0.0001); cox = ra * sin(tb2); coy = ra * cos(tb2); period = cox * 4.0; mx = px - period * floor(px / period); px2 = abs(mx - cox * 2.0); p1x = px2; p1y = py; p2x = abs(px2 - 2.0 * cox); p2y = -py + 2.0 * coy; v1x = p1x - cox; v1y = p1y - coy; l1 = sqrt(v1x * v1x + v1y * v1y); al1 = sqrt(p1x * p1x + p1y * p1y); d1 = coy * p1x > cox * p1y ? l1 : abs(al1 - ra); v2x = p2x - cox; v2y = p2y - coy; l2 = sqrt(v2x * v2x + v2y * v2y); al2 = sqrt(p2x * p2x + p2y * p2y); d2 = coy * p2x > cox * p2y ? l2 : abs(al2 - ra); d = min(d1, d2) - thick; smoothstep(blur, 0.0, d)",
+    params:{tb:{value:0.8,min:0.01,max:1},ra:{value:0.1,min:0.03,max:0.3},thick:{value:0.01,min:0.002,max:0.05},blur:{value:0.005,min:0.001,max:0.05}},
+    dna:{ author:"makers-factory", tags:["sdf","pattern","wave","circle","repeating"], why:"Inigo Quilez 2D SDF — circle wave. A horizontally repeating sinusoidal wave made from arc segments. Uses GLSL-style mod (floor-based) for tiling. The tb parameter controls arc openness, ra the radius, thick adds stroke width. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-030", date:"2026-08-15", type:"gizmo", title:"Compass Field", tags:["Gizmo","Interactive"],
+    do_pixel:"gx = floor(x * cells); gy = floor(y * cells); lx = x * cells - gx - 0.5; ly = y * cells - gy - 0.5; tcx = (gx + 0.5) / cells; tcy = (gy + 0.5) / cells; ax = 0.5 + reach * sin(2.0 * t); ay = 0.5 + reach * sin(2.9 * t); angle = atan2(ay - tcy, ax - tcx) + 1.5708; perp = abs(lx * sin(angle) - ly * cos(angle)); along = abs(lx * cos(angle) + ly * sin(angle)); (perp < thick ? 1.0 : 0.0) * (along < len ? 1.0 : 0.0)",
+    params:{cells:{value:16,min:4,max:30},reach:{value:0.3,min:0.1,max:0.45},thick:{value:0.04,min:0.01,max:0.15},len:{value:0.35,min:0.1,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","vector-field","compass","direction","animated"], why:"Hair-comb vector field from t06_229. Each tile draws a line segment perpendicular to the direction toward a Lissajous attractor. The +PI/2 offset means the needles trace contour lines, not compass bearings. The field combs itself as the attractor drifts." } },
+  { cat:"PP-031", date:"2026-08-15", type:"gizmo", title:"Concentric Pulse", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; d = sqrt(dx * dx + dy * dy); 0.5 + 0.5 * sin(d * frequency - t * speed)",
+    params:{frequency:{value:40,min:1,max:200},speed:{value:0.1,min:0,max:2}},
+    dna:{ author:"makers-factory", tags:["pattern","rings","concentric","animated"], why:"Concentric rings from centre with time animation. st_010 step/smoothstep on distance — the falloff law wearing its equation." } },
+  { cat:"PP-032", date:"2026-08-15", type:"gizmo", title:"Contour Bands", tags:["Gizmo","Interactive"],
+    do_pixel:"n = 0.5 + 0.5 * noise2(x * scale + t * drift, y * scale); 0.5 + 0.5 * cos(n * bands * 6.28318)",
+    params:{scale:{value:3,min:0.5,max:20},bands:{value:8,min:1,max:40},drift:{value:0.02,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","contour","topographic","noise","animated"], why:"Contour-banding from t06_044 — cos of field equals free topo lines. The net curtains reading. Water contours, topographic maps, terrain." } },
+  { cat:"PP-033", date:"2026-08-15", type:"gizmo", title:"Conveyor Dots", tags:["Gizmo","Interactive"],
+    do_pixel:"sy = y + t * speed; gx = floor(x * grid_size); gy = floor(sy * grid_size); cx = (gx + 0.5) / grid_size; cy = (gy + 0.5) / grid_size; dy_c = sy - cy; dx_c = x - cx; d = sqrt(dx_c * dx_c + dy_c * dy_c) * grid_size; rx = cx - 0.5; ry = (cy - floor(cy)) - 0.5; rd = sqrt(rx * rx + ry * ry); fall = 1.0 / (1.0 + rd * rd * falloff * falloff); r = 0.35 * fall; smoothstep(r, r * 0.6, d)",
+    params:{grid_size:{value:10,min:3,max:40},falloff:{value:3,min:0.5,max:10},speed:{value:0.05,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","dots","conveyor","grid","animated"], why:"Dots on a vertical conveyor belt with radial size falloff from centre. t06_034 lattice conveyor." } },
+  { cat:"PP-034", date:"2026-08-15", type:"gizmo", title:"Cool S", tags:["Gizmo","Interactive"],
+    do_pixel:"px_raw = (x - 0.5) / scale; py_raw = (y - 0.5) / scale; six = py_raw < 0.0 ? -px_raw : px_raw; px = abs(px_raw); qy = abs(py_raw) - 0.2; rex = px - min(round(px / 0.4), 0.4); aby = abs(qy - 0.2) - 0.6; c1 = clamp(0.5 * (six - qy), 0.0, 0.2); v1x = six - c1; v1y = -qy - c1; dd = v1x * v1x + v1y * v1y; c2 = clamp(0.5 * (px - aby), 0.0, 0.4); v2x = px - c2; v2y = -aby - c2; dd = min(dd, v2x * v2x + v2y * v2y); c3 = clamp(qy, 0.0, 0.4); v3x = rex; v3y = qy - c3; dd = min(dd, v3x * v3x + v3y * v3y); s = 2.0 * px + aby + abs(aby + 0.4) - 0.4; d = sqrt(dd) * (s > 0.0 ? 1.0 : -1.0) * scale; smoothstep(blur, 0.0, d)",
+    params:{scale:{value:0.3,min:0.1,max:0.5},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","cool-s","curve","iconic"], why:"Inigo Quilez 2D SDF — the Cool S (Super S / Stussy S). The iconic S-shape doodled on every schoolkid's notebook. Six line segments, no curves — the distance is computed to each segment and minimized. Scale controls overall size. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-035", date:"2026-08-15", type:"gizmo", title:"Cosine Ramp", tags:["Gizmo","Interactive"],
+    do_pixel:"0.5 + 0.5 * cos(6.28318 * (freq * x + phase + t * speed))",
+    params:{freq:{value:2,min:0.5,max:20},phase:{value:0,min:0,max:1},speed:{value:0.02,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["ramp","cosine","palette","animated"], why:"Inigo Quilez cosine palette formula: a + b*cos(2pi*(c*t+d)). Here as a greyscale wave across x. The basis of all IQ procedural color work, reduced to one channel. Frequency sets the number of oscillations, phase slides the pattern, speed animates." } },
+  { cat:"PP-036", date:"2026-08-15", type:"gizmo", title:"Cracked Mud", tags:["Gizmo","Interactive"],
+    do_pixel:"f1 = voronoi2(x * scale + t * drift, y * scale, 1, 1.0); f2 = voronoi2(x * scale + t * drift, y * scale, 2, 1.0); border = f2 - f1; smoothstep(0.0, crack_width, border)",
+    params:{scale:{value:6,min:1,max:30},crack_width:{value:0.05,min:0.01,max:0.3},drift:{value:0.005,min:0,max:0.2}},
+    dna:{ author:"makers-factory", tags:["noise","voronoi","cracks","cellular","animated"], why:"Voronoi F2-F1 (border distance), creating cracked/cellular boundaries. st_007 voronoi borders." } },
+  { cat:"PP-037", date:"2026-08-15", type:"gizmo", title:"Crescent", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x - 0.5; py = abs(y - 0.5); d1 = sqrt(px * px + py * py) - outer; d2 = sqrt((px - offset) * (px - offset) + py * py) - inner; d = max(d1, -d2); smoothstep(blur, 0.0, d)",
+    params:{outer:{value:0.25,min:0.1,max:0.45},inner:{value:0.2,min:0.05,max:0.4},offset:{value:0.12,min:0,max:0.35},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","crescent","moon","subtraction"], why:"Crescent moon via SDF boolean subtraction: max(circle, -circle). Outer circle defines the body, inner circle (offset sideways) carves the bite. Three params give full control — from thin sickle to fat gibbous. The oldest shape in the sky, now a distance field. Source: iquilezles.org/articles/distfunctions2d (sdMoon simplified to boolean form)." } },
+  { cat:"PP-038", date:"2026-08-15", type:"gizmo", title:"Cross Field", tags:["Gizmo","Interactive"],
+    do_pixel:"hd = max(abs(x - 0.5) - arm, abs(y - 0.5) - thick); vd = max(abs(x - 0.5) - thick, abs(y - 0.5) - arm); d = min(hd, vd); smoothstep(blur, 0.0, d)",
+    params:{arm:{value:0.3,min:0.05,max:0.48},thick:{value:0.05,min:0.01,max:0.2},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","cross","plus"], why:"Union of two box SDFs — horizontal arm and vertical arm. Medical cross, crosshair, or plus sign as a signed distance field. Arm controls reach, thick controls bar width, blur softens edges. Source: SDF boolean union min(d1,d2) from IQ's 2D distance functions." } },
+  { cat:"PP-039", date:"2026-08-15", type:"gizmo", title:"Cross Round", tags:["Gizmo","Interactive"],
+    do_pixel:"ppx = abs(x - 0.5); ppy = abs(y - 0.5); sx = ppy > ppx ? ppy : ppx; sy = ppy > ppx ? ppx : ppy; qx = sx - arm; qy = sy - thick; k = max(qy, qx); wx = k > 0.0 ? qx : thick - sx; wy = k > 0.0 ? qy : -k; mwx = max(wx, 0.0); mwy = max(wy, 0.0); d = (k > 0.0 ? 1.0 : -1.0) * sqrt(mwx * mwx + mwy * mwy) + rnd; smoothstep(blur, 0.0, d)",
+    params:{arm:{value:0.25,min:0.05,max:0.48},thick:{value:0.06,min:0.02,max:0.2},rnd:{value:-0.02,min:-0.1,max:0.05},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","cross","rounded-corners"], why:"Inigo Quilez 2D SDF — cross with rounded inner corners. Unlike CrossField (union of two boxes) or RoundedCross (rounded elbows), this uses a single distance function with an explicit rounding parameter. Negative rnd smooths the inner concave corners; positive rnd inflates the entire shape. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-03A", date:"2026-08-15", type:"gizmo", title:"Curtain", tags:["Gizmo","Interactive"],
+    do_pixel:"wave = sin(y * wave_freq * 6.28318 + t * speed) * wave_amount; lx = (x + wave) * lines; frac = lx - floor(lx); d = abs(frac - 0.5); smoothstep(0.1, 0.0, d)",
+    params:{lines:{value:20,min:5,max:80},wave_amount:{value:0.05,min:0,max:0.3},wave_freq:{value:3,min:0.5,max:20},speed:{value:0.05,min:0,max:1}},
+    dna:{ author:"makers-factory", tags:["pattern","curtain","lines","wave","rain","animated"], why:"Vertical wavy lines like net curtains or rain. t06_044 net curtains." } },
+  { cat:"PP-03B", date:"2026-08-15", type:"gizmo", title:"Cut Disk", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = y - 0.5; w = sqrt(max(radius * radius - cut * cut, 0.0)); s = max((cut - radius) * px * px + w * w * (cut + radius - 2.0 * py), cut * px - w * py); dl = sqrt(px * px + py * py) - radius; dc = cut - py; de = sqrt((px - w) * (px - w) + (py - cut) * (py - cut)); d = s < 0.0 ? dl : (px < w ? dc : de); smoothstep(blur, 0.0, d)",
+    params:{radius:{value:0.3,min:0.1,max:0.45},cut:{value:-0.1,min:-0.35,max:0.35},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","disk","cut","truncated"], why:"Inigo Quilez 2D SDF — circle with a horizontal flat cut. Cut controls where the slice goes: negative keeps more disk, positive keeps less. Three-way distance: body of circle, flat edge, or corner. Useful for D-pads, truncated shapes, and any circle that needs a flat bottom. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-03C", date:"2026-08-15", type:"gizmo", title:"Depth Stripes", tags:["Gizmo","Interactive"],
+    do_pixel:"py = pow(y + 0.001, perspective); freq = stripe_count * py + t * speed; 0.5 + 0.5 * sin(freq * 6.28318)",
+    params:{stripe_count:{value:15,min:2,max:60},perspective:{value:2,min:0.5,max:5},speed:{value:0.03,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","stripes","perspective","depth","animated"], why:"Horizontal stripes with depth-like perspective — spacing decreases toward top. t06_017 boardwalk perspective." } },
+  { cat:"PP-03D", date:"2026-08-15", type:"gizmo", title:"Diagonal Flow", tags:["Gizmo","Interactive"],
+    do_pixel:"n = noise2(x * noise_scale + t * speed, y * noise_scale) * 0.3; 0.5 + 0.5 * sin((x + y + n) * frequency + t * speed * 2.0)",
+    params:{frequency:{value:20,min:2,max:100},noise_scale:{value:3,min:0.5,max:20},speed:{value:0.05,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","diagonal","flow","noise","animated"], why:"Diagonal line pattern with noise displacement — order meets chaos. From t06 diagonal patterns." } },
+  { cat:"PP-03E", date:"2026-08-15", type:"gizmo", title:"Diffraction Field", tags:["Gizmo","Interactive"],
+    do_pixel:"f = freq * 6.28318; s = t * speed; d1 = sqrt((x - 0.8) * (x - 0.8) + (y - 0.5) * (y - 0.5)); d2 = sqrt((x - 0.65) * (x - 0.65) + (y - 0.76) * (y - 0.76)); d3 = sqrt((x - 0.35) * (x - 0.35) + (y - 0.76) * (y - 0.76)); d4 = sqrt((x - 0.2) * (x - 0.2) + (y - 0.5) * (y - 0.5)); d5 = sqrt((x - 0.35) * (x - 0.35) + (y - 0.24) * (y - 0.24)); d6 = sqrt((x - 0.65) * (x - 0.65) + (y - 0.24) * (y - 0.24)); val = sin(d1 * f - s) + sin(d2 * f - s) + sin(d3 * f - s) + sin(d4 * f - s) + sin(d5 * f - s) + sin(d6 * f - s); 0.5 + val / 12.0",
+    params:{freq:{value:20,min:5,max:80},speed:{value:1,min:0,max:5}},
+    dna:{ author:"makers-factory", tags:["wave","interference","diffraction","physics","animated"], why:"Six-source wave interference: 6 point sources arranged in a regular hexagon emit circular wavefronts (sin of distance). Superposition creates constructive/destructive interference — bright maxima where waves align, dark minima where they cancel. The pattern is the 2D analogue of a hexagonal diffraction grating. Mined from Shadertoy wave interference simulations." } },
+  { cat:"PP-03F", date:"2026-08-15", type:"gizmo", title:"Disco Floor", tags:["Gizmo","Interactive"],
+    do_pixel:"gx = floor(x * cells); gy = floor(y * cells); h = abs(sin(gx * 127.1 + gy * 311.7 + t * speed) * 43758.5453); h - floor(h)",
+    params:{cells:{value:8,min:2,max:30},speed:{value:0.3,min:0,max:5}},
+    dna:{ author:"makers-factory", tags:["pattern","grid","hash","animated","random"], why:"Per-cell hash with time injection — from st_019 hash function in taste_07. Each tile gets a pseudo-random brightness that cycles over time. Speed at zero = static stained glass. Speed up = disco floor." } },
+  { cat:"PP-040", date:"2026-08-15", type:"gizmo", title:"Dot Matrix", tags:["Gizmo","Interactive"],
+    do_pixel:"gx = floor(x * dots); gy = floor(y * dots); cx = (gx + 0.5) / dots; cy = (gy + 0.5) / dots; dx = (x - cx) * dots; dy = (y - cy) * dots; d = sqrt(dx * dx + dy * dy); r = dot_size + 0.05 * sin(t * speed + gx * 0.5 + gy * 0.7); smoothstep(r, r * 0.8, d)",
+    params:{dots:{value:16,min:2,max:64},dot_size:{value:0.3,min:0.05,max:0.49},speed:{value:0.02,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","dots","grid","halftone","animated"], why:"Regular grid of circular dots, useful as a halftone source. Utility/halftone foundation." } },
+  { cat:"PP-041", date:"2026-08-15", type:"gizmo", title:"Droste Spiral", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r = sqrt(dx * dx + dy * dy) + 0.0001; lnr = log(r); th = atan2(dy, dx); sn = 0.0 - log(max(zoom, 0.01)) / 6.28318; nl = pow(2.71828, lnr - th * sn); na = sn * lnr + th + t * speed; nx = nl * cos(na) * scale; ny = nl * sin(na) * scale; 0.5 + 0.5 * noise2(nx, ny)",
+    params:{scale:{value:3,min:0.5,max:15},zoom:{value:3,min:1.1,max:10},speed:{value:0.2,min:0,max:2}},
+    dna:{ author:"makers-factory", tags:["pattern","spiral","droste","fractal","self-similar","animated"], why:"Escher's 'Print Gallery' spiral: w = z^alpha in complex space. The transform maps a pattern into a self-similar spiral — zoom in and the pattern repeats. Log-polar coordinates rotate and scale simultaneously. Mined from Shadertoy conformal mapping and Reinder Nijhoff's Droste implementation." } },
+  { cat:"PP-042", date:"2026-08-15", type:"gizmo", title:"Egg", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = y - 0.5; rr = 0.5 * (height + bot_r + top_r) / bulge; da = rr - bot_r; db = rr - top_r; vy = (db * db - da * da - height * height) / (2.0 * height); vx = sqrt(max(da * da - vy * vy, 0.0)); k = py * vx - px * vy; dx1 = px + vx; dy1 = py + vy; d1 = sqrt(dx1 * dx1 + dy1 * dy1) - rr; d2a = sqrt(px * px + py * py) - bot_r; dy2 = py - height; d2b = sqrt(px * px + dy2 * dy2) - top_r; d2 = min(d2a, d2b); d = (k > 0.0 && k < height * (px + vx)) ? d1 : d2; smoothstep(blur, 0.0, d)",
+    params:{height:{value:0.1,min:0.02,max:0.25},bot_r:{value:0.12,min:0.03,max:0.3},top_r:{value:0.06,min:0.02,max:0.2},bulge:{value:0.5,min:0.2,max:1.5},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","egg","oval","organic"], why:"Inigo Quilez 2D SDF — egg shape. Two circles (bottom radius bot_r, top radius top_r) offset vertically by height, connected by a smooth envelope controlled by bulge. An asymmetric oval with tunable proportions — the parent shape for any tapered organic form. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-043", date:"2026-08-15", type:"gizmo", title:"Elastic Pulse", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r = sqrt(dx * dx + dy * dy); phase = (r - t * speed * 0.05) * freq; envelope = pow(2.71828, 0.0 - phase * phase * damping); osc = cos(phase * 6.28318); 0.5 + 0.5 * envelope * osc",
+    params:{freq:{value:8,min:2,max:30},speed:{value:0.3,min:0,max:2},damping:{value:5,min:0.5,max:20}},
+    dna:{ author:"makers-factory", tags:["wave","elastic","pulse","shockwave","damped","animated"], why:"Damped oscillating shockwave: a radial wavefront that decays with a Gaussian envelope. The cosine oscillation inside the envelope creates the elastic bounce — rings of alternating bright/dark that fade with distance from the wavefront. Speed moves the wavefront outward over time. Mined from LYGIA animation/easing elastic functions applied spatially." } },
+  { cat:"PP-044", date:"2026-08-15", type:"gizmo", title:"Electric Arc", tags:["Gizmo","Interactive"],
+    do_pixel:"py = y * freq; n = noise2(py, t * speed); d = abs(x - 0.5 - n * warp); glow = pow(clamp(1.0 - d / thick, 0.0, 1.0), falloff); clamp(glow, 0.0, 1.0)",
+    params:{freq:{value:5,min:1,max:20},warp:{value:0.2,min:0.01,max:0.45},thick:{value:0.08,min:0.01,max:0.3},falloff:{value:2,min:0.5,max:6},speed:{value:0.5,min:0,max:5}},
+    dna:{ author:"makers-factory", tags:["noise","line","electric","arc","lightning","animated"], why:"A vertical centre-line displaced horizontally by 1D noise sampled along y. pow() falloff gives the glow halo. Speed drives the noise time axis — fast = flickering lightning, slow = drifting smoke trail." } },
+  { cat:"PP-045", date:"2026-08-15", type:"gizmo", title:"Ellipse", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = abs(y - 0.5); d = (sqrt(px * px / (ax * ax) + py * py / (ay * ay)) - 1.0) * min(ax, ay); smoothstep(blur, 0.0, d)",
+    params:{ax:{value:0.25,min:0.03,max:0.48},ay:{value:0.15,min:0.03,max:0.48},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","ellipse","oval"], why:"Approximate 2D SDF for ellipse. Uses the level-set (length(p/ab)-1)*min(ab) approximation rather than the exact Newton-iteration solution. Visually accurate for moderate aspect ratios (up to ~2:1). The exact IQ ellipse requires acos and cube root with branching — deferred to a future version if precision matters. Source: iquilezles.org/articles/distfunctions2d (simplified)" } },
+  { cat:"PP-046", date:"2026-08-15", type:"gizmo", title:"Erosion Field", tags:["Gizmo","Interactive"],
+    do_pixel:"n1 = noise2(x * scale1 + t * drift, y * scale1); n2 = noise2(x * scale2 + 5.7 + t * drift * 0.7, y * scale2 + 3.1); diff = (n1 - n2) * contrast; clamp(0.5 + diff, 0.0, 1.0)",
+    params:{scale1:{value:3,min:0.5,max:20},scale2:{value:6,min:0.5,max:20},contrast:{value:2,min:0.5,max:10},drift:{value:0.01,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["noise","erosion","landscape","subtract","animated"], why:"Two noise layers subtracted, creating cliff/erosion boundaries. t06 erosion patterns." } },
+  { cat:"PP-047", date:"2026-08-15", type:"gizmo", title:"FBM Noise", tags:["Gizmo","Interactive"],
+    do_pixel:"turbulence2(x * scale + t * drift, y * scale, octaves, 2.0, 0.5)",
+    params:{scale:{value:4,min:0.5,max:50},octaves:{value:4,min:1,max:8},drift:{value:0.01,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["noise","fbm","turbulence","animated"], why:"Fractal Brownian motion noise field. st_004 in taste_07 — the noise rig. Lacunarity 2, gain 0.5 (standard fbm). One abs() is the difference between a cloud and a fire." } },
+  { cat:"PP-048", date:"2026-08-15", type:"gizmo", title:"Feather Strands", tags:["Gizmo","Interactive"],
+    do_pixel:"sy = y * strand_count; strand = floor(sy); frac = sy - strand; along = x; nx = noise2(strand * 1.7 + t * speed, along * 3.0); disp = nx * wildness * along * along; shifted = frac + disp; d = abs(shifted - 0.5); smoothstep(0.12, 0.0, d)",
+    params:{strand_count:{value:30,min:5,max:100},wildness:{value:0.3,min:0,max:2},speed:{value:0.02,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","organic","feather","strands","animated"], why:"Parallel strands with noise displacement increasing along their length, like pulling apart a feather. t06_025 pen-walk feather." } },
+  { cat:"PP-049", date:"2026-08-15", type:"gizmo", title:"Flame Wisps", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale + t * drift; py = y * scale; n = turbulence2(px, py, octaves, 2.0, 0.5); flame = pow(abs(n * 2.0 - 1.0), sharpness); clamp(flame, 0.0, 1.0)",
+    params:{scale:{value:4,min:0.5,max:20},octaves:{value:6,min:1,max:8},drift:{value:0.02,min:0,max:0.5},sharpness:{value:2,min:0.5,max:5}},
+    dna:{ author:"makers-factory", tags:["noise","flame","fire","turbulence","ridge","animated"], why:"Abs-folded turbulence from st_004 in taste_07. 'One abs() is the difference between a cloud and a fire.' The fold creates ridges and creases. Sharpness dials between fire and cloud." } },
+  { cat:"PP-04A", date:"2026-08-15", type:"gizmo", title:"Flower Field", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r = sqrt(dx * dx + dy * dy) + 0.0001; a = atan2(dy, dx) + t * speed; petal = abs(cos(a * petals * 0.5)); d = r - size * petal; smoothstep(blur, 0.0, 0.0 - d)",
+    params:{petals:{value:5,min:2,max:16},size:{value:0.35,min:0.1,max:0.5},blur:{value:0.02,min:0.005,max:0.15},speed:{value:0.1,min:0,max:1}},
+    dna:{ author:"makers-factory", tags:["sdf","flower","petal","organic","shape","animated"], why:"Flower rosette SDF: radius modulated by abs(cos(angle * N/2)). Creates organic petal shapes — the cosine lobes pull the radius outward at N evenly spaced angles. PolarRose uses sin(n*theta) for a polar curve; this uses abs(cos) for a filled petal shape. Mined from LYGIA sdf/flowerSDF." } },
+  { cat:"PP-04B", date:"2026-08-15", type:"gizmo", title:"Flow Noise", tags:["Gizmo","Interactive"],
+    do_pixel:"ca = cos(t * speed * 0.5); sa = sin(t * speed * 0.5); rx = (x - 0.5) * scale; ry = (y - 0.5) * scale; nx = rx * ca - ry * sa; ny = rx * sa + ry * ca; n1 = noise2(nx, ny); ca2 = cos(t * speed * 0.7 + 1.0); sa2 = sin(t * speed * 0.7 + 1.0); nx2 = rx * 2.0 * ca2 - ry * 2.0 * sa2 + 5.2; ny2 = rx * 2.0 * sa2 + ry * 2.0 * ca2 + 1.3; n2 = noise2(nx2, ny2); 0.5 + 0.5 * (n1 + n2 * 0.5) / 1.5",
+    params:{scale:{value:4,min:1,max:15},speed:{value:0.5,min:0,max:3}},
+    dna:{ author:"makers-factory", tags:["noise","flow","animated","organic","fluid"], why:"Flow noise: time-rotated coordinate sampling for smooth animation. Instead of sliding through a noise field (which creates visible drift), the sampling coordinates rotate over time — each octave at a different angular speed and phase. The result looks like slowly churning fluid. Two octaves at different frequencies and rotation rates create organic motion. Mined from Shadertoy flow noise implementations and Perlin's original flow noise paper." } },
+  { cat:"PP-04C", date:"2026-08-15", type:"gizmo", title:"Folded Wave", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale + t * drift; py = y * scale; w = sin(px) + sin(py * 0.7 + px * 0.3); f = abs(w * fold); f - floor(f)",
+    params:{scale:{value:8,min:1,max:25},fold:{value:2,min:0.5,max:8},drift:{value:0.03,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","wave","fold","sawtooth","animated"], why:"Folded wave train from t06_051 taste — two sines combined then abs-folded via fract(abs(w*fold)). The fold count multiplies the creases. Low fold = gentle ripple; high fold = corrugated metal / topographic contour stacking." } },
+  { cat:"PP-04D", date:"2026-08-15", type:"gizmo", title:"Fractal Kaleido", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r = sqrt(dx * dx + dy * dy) + 0.0001; a = atan2(dy, dx); seg = 6.28318 / max(folds, 1.0); a = a - seg * floor(a / seg + 0.5); a = abs(a); seg2 = seg / max(subfolds, 1.0); a = a - seg2 * floor(a / seg2 + 0.5); a = abs(a); nx = r * cos(a) * scale; ny = r * sin(a) * scale; 0.5 + 0.5 * sin(nx + t * speed) * cos(ny)",
+    params:{folds:{value:6,min:2,max:16},subfolds:{value:3,min:1,max:8},scale:{value:5,min:1,max:20},speed:{value:0.3,min:0,max:2}},
+    dna:{ author:"makers-factory", tags:["pattern","kaleidoscope","fractal","symmetry","fold","animated"], why:"Nested rotational domain folds: the angle is folded into 1/N of the circle (primary folds), then folded again within that sector (subfolds). Two levels of angular abs-fold create nested kaleidoscopic symmetry — a fractal-like pattern from simple sin*cos in the folded domain. Distinct from MandalaFold (single-level fold) by the nested structure. Mined from Shadertoy fractal kaleidoscope shaders." } },
+  { cat:"PP-04E", date:"2026-08-15", type:"gizmo", title:"Fractal Spiral", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r = sqrt(dx * dx + dy * dy); a = atan2(dy, dx); golden = 2.39996; spiral = a - r * count * golden + t * speed * 6.28318; ring = 0.5 + 0.5 * cos(r * count * 6.28318); arm = 0.5 + 0.5 * cos(spiral * 5.0); dot = smoothstep(size + 0.01, size, r * abs(sin(spiral * count * 0.5))); clamp(ring * arm * 0.5 + dot * 0.5, 0.0, 1.0)",
+    params:{count:{value:200,min:10,max:500},size:{value:0.02,min:0.005,max:0.1},speed:{value:0.01,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","fibonacci","spiral","golden","phyllotaxis","animated"], why:"Fibonacci/golden angle spiral dot pattern. From t06_027 prime-structured arms." } },
+  { cat:"PP-04F", date:"2026-08-15", type:"gizmo", title:"Gain Field", tags:["Gizmo","Interactive"],
+    do_pixel:"val = sqrt((x - 0.5) * (x - 0.5) + (y - 0.5) * (y - 0.5)) * scale; val = val - floor(val); lo = 0.5 * pow(max(2.0 * val, 0.0001), gain); hi = 1.0 - 0.5 * pow(max(2.0 - 2.0 * val, 0.0001), gain); (val < 0.5) ? lo : hi",
+    params:{scale:{value:3,min:1,max:10},gain:{value:2,min:0.5,max:8}},
+    dna:{ author:"makers-factory", tags:["gradient","gain","contrast","remap","radial"], why:"Perlin's gain function applied spatially: redistributes a radial gradient's contrast. gain<1 flattens midtones (S-curve inverted), gain>1 pushes values toward 0 and 1 (S-curve). The formula 0.5*pow(2x,k) / 1-0.5*pow(2-2x,k) is symmetric and C1-continuous at x=0.5. Applied to a repeating radial distance field, it sculpts the brightness profile of concentric rings. Mined from LYGIA math/gain and Perlin's bias/gain paper." } },
+  { cat:"PP-050", date:"2026-08-15", type:"gizmo", title:"Gaussian Spot", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r2 = dx * dx + dy * dy; pow(2.71828, 0.0 - r2 / max(sigma * sigma * 2.0, 0.0001)) * brightness",
+    params:{sigma:{value:0.15,min:0.02,max:0.5},brightness:{value:1,min:0.1,max:3}},
+    dna:{ author:"makers-factory", tags:["falloff","gaussian","bell","soft","spotlight"], why:"True Gaussian bell curve applied radially: exp(-r^2 / 2*sigma^2). Unlike smoothstep or polynomial falloffs, this is the exact normal distribution shape — maximum at center, exponential decay, no hard edge. Sigma controls spread, brightness controls peak amplitude. The most physically correct soft spotlight. Mined from LYGIA draw/ Gaussian functions." } },
+  { cat:"PP-051", date:"2026-08-15", type:"gizmo", title:"Gear Wheel", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r = sqrt(dx * dx + dy * dy); a = atan2(dy, dx) + t * speed; tooth = depth * clamp(sin(a * teeth) * sharp, -1.0, 1.0) * 0.5 + depth * 0.5; gear_r = radius + tooth; d_outer = r - gear_r; d_inner = hub - r; d = max(d_outer, d_inner); smoothstep(0.005, 0.0, d)",
+    params:{teeth:{value:12,min:3,max:40},radius:{value:0.25,min:0.1,max:0.45},depth:{value:0.06,min:0.01,max:0.15},hub:{value:0.08,min:0.02,max:0.2},sharp:{value:5,min:1,max:20},speed:{value:0.1,min:0,max:1}},
+    dna:{ author:"makers-factory", tags:["sdf","gear","mechanical","shape","animated"], why:"Toothed gear SDF: polar distance modulated by clamped sine for tooth profiles. The sharp param controls tooth squareness — low values give rounded bumps, high values give flat-topped teeth. Hub param carves the center hole. Mined from LYGIA sdf/gearSDF and Shadertoy mechanical pattern studies." } },
+  { cat:"PP-052", date:"2026-08-15", type:"gizmo", title:"Geometric Decay", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; d = sqrt(dx * dx + dy * dy); s = 1.0; total = 0.0; s = s * decay; r1 = smoothstep(s + 0.005, s - 0.005, d); total = max(total, r1 * s); s = s * decay; r2 = smoothstep(s + 0.005, s - 0.005, d); total = max(total, r2 * s); s = s * decay; r3 = smoothstep(s + 0.005, s - 0.005, d); total = max(total, r3 * s); s = s * decay; r4 = smoothstep(s + 0.005, s - 0.005, d); total = max(total, r4 * s); s = s * decay; r5 = smoothstep(s + 0.005, s - 0.005, d); total = max(total, r5 * s); s = s * decay; r6 = smoothstep(s + 0.005, s - 0.005, d); total = max(total, r6 * s); s = s * decay; r7 = smoothstep(s + 0.005, s - 0.005, d); total = max(total, r7 * s); s = s * decay; r8 = smoothstep(s + 0.005, s - 0.005, d); total = max(total, r8 * s); s = s * decay; r9 = smoothstep(s + 0.005, s - 0.005, d); total = max(total, r9 * s); s = s * decay; r10 = smoothstep(s + 0.005, s - 0.005, d); total = max(total, r10 * s); a = atan2(dy, dx); wave = 0.5 + 0.5 * sin(a * count + t * drift * 6.28318); total * wave",
+    params:{count:{value:30,min:4,max:64},decay:{value:0.93,min:0.8,max:0.99},drift:{value:0.01,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","geometric","decay","tunnel","perspective","animated"], why:"Nested circles with geometric size decay — each circle 0.93x the last. Tunnel/perspective illusion. From t06_046 geometric-decay tunnel." } },
+  { cat:"PP-053", date:"2026-08-15", type:"gizmo", title:"Gerstner Wave", tags:["Gizmo","Interactive"],
+    do_pixel:"k = 6.28318 / max(wavelength, 0.01); px = (x * cos(direction) + y * sin(direction)) * scale; ph = px * k - t * speed * sqrt(9.8 * scale / max(k, 0.01)); h = sin(ph - steepness * sin(ph)); 0.5 + 0.5 * h",
+    params:{scale:{value:3,min:0.5,max:15},wavelength:{value:0.5,min:0.05,max:2},steepness:{value:0.7,min:0,max:0.99},direction:{value:0.5,min:0,max:6.28},speed:{value:0.5,min:0,max:3}},
+    dna:{ author:"makers-factory", tags:["wave","ocean","gerstner","physics","water","animated"], why:"Gerstner ocean wave: sin(x - A*sin(x)) creates peaked crests and flat troughs, unlike regular sine waves. Steepness parameter A controls cusp sharpness — at 0 it is a sine wave, approaching 1 the crests become knife-sharp. The dispersion relation sqrt(g/k) gives physically correct wave speed. Mined from LYGIA generative/gerstnerWave and ocean rendering literature." } },
+  { cat:"PP-054", date:"2026-08-15", type:"gizmo", title:"Gradient Noise", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale + t * drift; py = y * scale; ix = floor(px); iy = floor(py); fx = px - ix; fy = py - iy; ux = fx * fx * (3.0 - 2.0 * fx); uy = fy * fy * (3.0 - 2.0 * fy); a00 = abs(sin(ix * 127.1 + iy * 311.7) * 43758.5453); a00 = (a00 - floor(a00)) * 6.2832; a10 = abs(sin((ix + 1.0) * 127.1 + iy * 311.7) * 43758.5453); a10 = (a10 - floor(a10)) * 6.2832; a01 = abs(sin(ix * 127.1 + (iy + 1.0) * 311.7) * 43758.5453); a01 = (a01 - floor(a01)) * 6.2832; a11 = abs(sin((ix + 1.0) * 127.1 + (iy + 1.0) * 311.7) * 43758.5453); a11 = (a11 - floor(a11)) * 6.2832; d00 = cos(a00) * fx + sin(a00) * fy; d10 = cos(a10) * (fx - 1.0) + sin(a10) * fy; d01 = cos(a01) * fx + sin(a01) * (fy - 1.0); d11 = cos(a11) * (fx - 1.0) + sin(a11) * (fy - 1.0); m0 = d00 + ux * (d10 - d00); m1 = d01 + ux * (d11 - d01); n = m0 + uy * (m1 - m0); 0.5 + 0.5 * n",
+    params:{scale:{value:5,min:1,max:30},drift:{value:0.01,min:0,max:0.2}},
+    dna:{ author:"makers-factory", tags:["noise","gradient","perlin","smooth","animated"], why:"Perlin gradient noise: hash to random gradient vector per grid corner, dot product with displacement, smooth cubic interpolation. From Book of Shaders ch.11 — the algorithm that changed procedural graphics. Distinct from value noise (interpolates scalars, creating blocky artifacts): gradient noise interpolates vectors, giving smooth directional lobes without grid alignment." } },
+  { cat:"PP-055", date:"2026-08-15", type:"gizmo", title:"Grid Warp", tags:["Gizmo","Interactive"],
+    do_pixel:"wx = noise2(x * noise_scale + t * speed, y * noise_scale) * warp_amount; wy = noise2(x * noise_scale + 5.5, y * noise_scale + 3.3 + t * speed) * warp_amount; gx = sin((x + wx) * grid_freq * 6.28318); gy = sin((y + wy) * grid_freq * 6.28318); v = max(abs(gx), abs(gy)); smoothstep(0.9, 1.0, v)",
+    params:{grid_freq:{value:10,min:2,max:40},warp_amount:{value:0.05,min:0,max:0.3},noise_scale:{value:3,min:0.5,max:15},speed:{value:0.02,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","grid","warp","noise","deformation","animated"], why:"Regular grid deformed by noise displacement. Warped grid patterns." } },
+  { cat:"PP-056", date:"2026-08-15", type:"gizmo", title:"Gyroid Slice", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale; pz = t * drift; g = sin(px) * cos(py) + sin(py) * cos(pz) + sin(pz) * cos(px); clamp(1.0 - abs(g) / thresh, 0.0, 1.0)",
+    params:{scale:{value:8,min:1,max:25},thresh:{value:0.3,min:0.05,max:1},drift:{value:0.02,min:0,max:0.3}},
+    dna:{ author:"makers-factory", tags:["pattern","gyroid","minimal-surface","organic","animated"], why:"The gyroid: sin(x)cos(y)+sin(y)cos(z)+sin(z)cos(x)=0. A triply-periodic minimal surface sliced by the z=t*drift plane. Nature uses it in butterfly wings and bone marrow. Threshold controls the wall thickness of the labyrinth." } },
+  { cat:"PP-057", date:"2026-08-15", type:"gizmo", title:"Halftone Grid", tags:["Gizmo","Interactive"],
+    do_pixel:"gx = floor(x * grid_size); gy = floor(y * grid_size); cx = (gx + 0.5) / grid_size; cy = (gy + 0.5) / grid_size; dx = x - cx; dy = y - cy; dist = sqrt(dx * dx + dy * dy) * grid_size; wave = 0.5 + 0.5 * sin(cx * wave_freq * 6.28318 + cy * wave_freq * 3.14159 + t * wave_speed); dot_radius = wave * 0.5; smoothstep(dot_radius + 0.02, dot_radius - 0.02, dist)",
+    params:{grid_size:{value:16,min:4,max:64},wave_freq:{value:2,min:0.5,max:10},wave_speed:{value:0.05,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","halftone","dots","print","animated"], why:"Dots sized by a wave field — halftone print effect. From t06 halftone patterns." } },
+  { cat:"PP-058", date:"2026-08-15", type:"gizmo", title:"Hash Grain", tags:["Gizmo","Interactive"],
+    do_pixel:"seed = x * 94723.18 + y * 68107.29 + t * grain_speed * 173.91; h = abs(sin(seed) * 43758.5453); h = h - floor(h); h * intensity",
+    params:{intensity:{value:0.5,min:0,max:1},grain_speed:{value:1,min:0,max:10}},
+    dna:{ author:"makers-factory", tags:["noise","grain","film","static","hash","animated"], why:"Incoherent static/film grain: a high-frequency hash with no spatial coherence — each pixel gets an independent random value. Unlike noise2 (spatially smooth), this mimics photographic film grain or analog TV static. The large coordinate multipliers ensure decorrelation across adjacent pixels. Grain_speed controls temporal flickering rate. Mined from LYGIA generative/random and film grain shader techniques." } },
+  { cat:"PP-059", date:"2026-08-15", type:"gizmo", title:"Heart", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = (x - 0.5) * scale; dy = (0.4 - y) * scale; r2 = dx * dx + dy * dy; h = r2 - 1.0; d = h * h * h - dx * dx * dy * dy * dy; clamp(-d * edge, 0.0, 1.0)",
+    params:{scale:{value:3,min:1.5,max:8},edge:{value:50,min:5,max:500}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","heart","algebraic"], why:"Algebraic heart curve: (x^2+y^2-1)^3 - x^2*y^3 = 0. The implicit equation that every Valentine card is built on whether it knows it or not. Scale controls size, edge controls boundary sharpness. Centered slightly above middle for visual balance (more bulk in the two bumps than the single point)." } },
+  { cat:"PP-05A", date:"2026-08-15", type:"gizmo", title:"Hexagon", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = abs(y - 0.5); dot = min(-0.866025 * px + 0.5 * py, 0.0); px = px + 1.732050 * dot; py = py - dot; px = px - clamp(px, -0.57735 * radius, 0.57735 * radius); py = py - radius; d = sqrt(px * px + py * py) * (py > 0.0 ? 1.0 : -1.0); smoothstep(blur, 0.0, d)",
+    params:{radius:{value:0.25,min:0.05,max:0.48},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","hexagon","polygon"], why:"Inigo Quilez 2D SDF — regular hexagon via reflection folding. One reflection reduces the full hexagon to a single sector, then distance to the edge. The hex is the tile that bees discovered and GPUs keep rediscovering. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-05B", date:"2026-08-15", type:"gizmo", title:"Hexagram", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = abs(y - 0.5); d1 = min(-0.5 * px + 0.866025 * py, 0.0); px = px + d1; py = py - 1.732051 * d1; d2 = min(0.866025 * px - 0.5 * py, 0.0); px = px - 1.732051 * d2; py = py + d2; px = px - clamp(px, radius * 0.577350, radius * 1.732051); py = py - radius; d = sqrt(px * px + py * py) * (py > 0.0 ? 1.0 : -1.0); smoothstep(blur, 0.0, d)",
+    params:{radius:{value:0.2,min:0.05,max:0.4},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","hexagram","star","six-pointed"], why:"Inigo Quilez 2D SDF — hexagram (Star of David). Two reflections with hex symmetry constants. The six-pointed star formed by overlapping two equilateral triangles. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-05C", date:"2026-08-15", type:"gizmo", title:"Hex Grid", tags:["Gizmo","Interactive"],
+    do_pixel:"sx = x * scale; sy = y * scale * 1.1547; row = floor(sy); off = (row % 2) * 0.5; col = floor(sx + off); cx = col - off + 0.5; cy = (row + 0.5) / 1.1547; dx1 = abs(x * scale - cx); dy1 = abs(y * scale * 1.1547 - (row + 0.5)); cx2 = col + 1.0 - off + 0.5; dx2 = abs(x * scale - cx2); d1 = max(dx1, dy1 * 0.5 + dx1 * 0.5); d2 = max(dx2, dy1 * 0.5 + dx2 * 0.5); d = min(d1, d2); edge = abs(d - 0.5); smoothstep(thickness, 0.0, edge)",
+    params:{scale:{value:8,min:2,max:30},thickness:{value:0.05,min:0.01,max:0.2}},
+    dna:{ author:"makers-factory", tags:["pattern","hex","grid","tiling","geometric"], why:"Hexagonal tiling pattern. Geometric tiling." } },
+  { cat:"PP-05D", date:"2026-08-15", type:"gizmo", title:"Hex Truchet", tags:["Gizmo","Interactive"],
+    do_pixel:"sx = x * cells; sy = y * cells * 1.1547; row = floor(sy); parity = row - floor(row * 0.5) * 2.0; col = floor(sx - parity * 0.5); fx = sx - col - parity * 0.5 - 0.5; fy = sy - row - 0.5; h = abs(sin(col * 127.1 + row * 311.7) * 43758.5453); h = h - floor(h); a = floor(h * 6.0) * 1.0472; rx = fx * cos(a) - fy * sin(a); ry = fx * sin(a) + fy * cos(a); d1 = abs(sqrt((rx + 0.5) * (rx + 0.5) + ry * ry) - 0.3); d2 = abs(sqrt((rx - 0.25) * (rx - 0.25) + (ry - 0.433) * (ry - 0.433)) - 0.3); d3 = abs(sqrt((rx - 0.25) * (rx - 0.25) + (ry + 0.433) * (ry + 0.433)) - 0.3); d = min(d1, min(d2, d3)); smoothstep(width, 0.0, d)",
+    params:{cells:{value:6,min:2,max:20},width:{value:0.06,min:0.01,max:0.2}},
+    dna:{ author:"makers-factory", tags:["pattern","truchet","hexagonal","grid","arcs"], why:"Truchet tiling on a hexagonal grid: each hex cell gets one of 6 random orientations (60-degree increments), arcs drawn at the three alternating hex corners. The hex offset-row grid uses parity = row mod 2 to stagger columns. Creates flowing maze-like paths with hexagonal symmetry, distinct from square TruchetTile. Mined from Shadertoy hex Truchet variations." } },
+  { cat:"PP-05E", date:"2026-08-15", type:"gizmo", title:"Horseshoe", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = y - 0.5; cx = sin(opening); cy = cos(opening); l = sqrt(px * px + py * py); rx = -cx * px + cy * py; ry = cy * px + cx * py; fx = max(ry, rx) > 0.0 ? rx : l * (-cx > 0.0 ? 1.0 : -1.0); fy = rx > 0.0 ? ry : l; gx = fx - leg_w; gy = abs(fy - radius) - leg_len; mx = max(gx, 0.0); my = max(gy, 0.0); d = sqrt(mx * mx + my * my) + min(0.0, max(gx, gy)); smoothstep(blur, 0.0, d)",
+    params:{opening:{value:1.2,min:0.3,max:2.5},radius:{value:0.2,min:0.05,max:0.35},leg_w:{value:0.04,min:0.01,max:0.1},leg_len:{value:0.08,min:0.02,max:0.2},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","horseshoe","arc","omega"], why:"Inigo Quilez 2D SDF — horseshoe shape. A thick arc with straight legs extending from each end. Opening controls the bend angle, radius sets the curve, leg_w and leg_len control the straight extensions. The magnet, the omega, the tuning fork — any shape that bends then straightens. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-05F", date:"2026-08-15", type:"gizmo", title:"Hyperbola", tags:["Gizmo","Interactive"],
+    do_pixel:"ax = abs(x - 0.5); ay = abs(y - 0.5); px = (ax - ay) * 0.70710678; py = (ax + ay) * 0.70710678; x2 = px * px / 16.0; y2 = py * py / 16.0; rr = hk * (4.0 * hk - px * py) / 12.0; qq = (x2 - y2) * hk * hk; hh = qq * qq + rr * rr * rr; mr = sqrt(max(-rr, 0.000000001)); vc = rr * mr; aarg = clamp(qq / (abs(vc) > 0.000000001 ? vc : 0.000000001), -1.0, 1.0); u1 = mr * cos(acos(aarg) / 3.0); sm = sqrt(max(abs(hh), 0.0)); mq = pow(max(sm - qq, 0.000000001), 0.333333333); u2 = (mq - rr / (abs(mq) > 0.000000001 ? mq : 0.000000001)) / 2.0; uu = hh < 0.0 ? u1 : u2; ww = sqrt(max(uu + x2, 0.0)); bb = hk * py - x2 * px * 2.0; wd = ww > 0.0001 ? bb / (ww * 4.0) : 0.0; inner = 2.0 * x2 - uu + wd; tt = px / 4.0 - ww + sqrt(max(inner, 0.0)); hbound = sqrt(hhe * hhe * 0.5 + hk) - hhe * 0.70710678; tt = max(tt, hbound); fy = hk / (abs(tt) > 0.0001 ? tt : 0.0001); dx = px - tt; dy = py - fy; dd = sqrt(dx * dx + dy * dy); d = px * py < hk ? dd : -dd; smoothstep(blur, 0.0, d)",
+    params:{hk:{value:0.02,min:0.005,max:0.1},hhe:{value:0.2,min:0.05,max:0.4},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","hyperbola","conic","curve"], why:"Inigo Quilez 2D SDF — bounded hyperbola xy=k. Rotates 45 degrees to align the asymptotes, then solves a quartic (reduced to cubic via resolvent) for the closest point. hk controls the hyperbola constant, hhe bounds the arm length. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-060", date:"2026-08-15", type:"gizmo", title:"Interference", tags:["Gizmo","Interactive"],
+    do_pixel:"dx1 = x - 0.5 + separation * 0.5; dy1 = y - 0.5; d1 = sqrt(dx1 * dx1 + dy1 * dy1); dx2 = x - 0.5 - separation * 0.5; dy2 = y - 0.5; d2 = sqrt(dx2 * dx2 + dy2 * dy2); w1 = sin(d1 * freq - t * speed); w2 = sin(d2 * freq - t * speed); 0.5 + 0.25 * (w1 + w2)",
+    params:{freq:{value:30,min:5,max:200},separation:{value:0.3,min:0,max:1},speed:{value:0.05,min:0,max:2}},
+    dna:{ author:"makers-factory", tags:["pattern","interference","wave","physics","animated"], why:"Two wave sources creating interference pattern. Wave interference physics." } },
+  { cat:"PP-061", date:"2026-08-15", type:"gizmo", title:"Isosceles Triangle", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = y - 0.5; qx = half_w; qy = height; dpq = px * qx + py * qy; dqq = qx * qx + qy * qy + 0.0001; ta = clamp(dpq / dqq, 0.0, 1.0); aax = px - qx * ta; aay = py - qy * ta; tb = clamp(px / (qx + 0.0001), 0.0, 1.0); bbx = px - qx * tb; bby = py - qy; ss = qy > 0.0 ? -1.0 : 1.0; da = aax * aax + aay * aay; sa = ss * (px * qy - py * qx); db = bbx * bbx + bby * bby; sb = ss * (py - qy); finx = min(da, db); finy = min(sa, sb); d = -sqrt(finx) * (finy > 0.0 ? 1.0 : -1.0); smoothstep(blur, 0.0, d)",
+    params:{half_w:{value:0.2,min:0.03,max:0.45},height:{value:0.25,min:0.05,max:0.45},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","triangle","isosceles","polygon"], why:"Inigo Quilez 2D SDF — isosceles triangle. A triangle with two equal sides, defined by half-width at the base and height to the apex. Sharper and more directional than the equilateral triangle — the arrowhead, the pointer, the play button. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-062", date:"2026-08-15", type:"gizmo", title:"Jitter Dots", tags:["Gizmo","Interactive"],
+    do_pixel:"gx = floor(x * cells); gy = floor(y * cells); fx = x * cells - gx; fy = y * cells - gy; h1 = abs(sin(gx * 127.1 + gy * 311.7) * 43758.5453); h1 = h1 - floor(h1); h2 = abs(sin(gx * 269.5 + gy * 183.3) * 43758.5453); h2 = h2 - floor(h2); ox = (h1 - 0.5) * jitter; oy = (h2 - 0.5) * jitter; dx = fx - 0.5 - ox; dy = fy - 0.5 - oy; dd = sqrt(dx * dx + dy * dy); clamp(1.0 - dd / radius, 0.0, 1.0)",
+    params:{cells:{value:12,min:3,max:40},radius:{value:0.3,min:0.05,max:0.5},jitter:{value:0.4,min:0,max:1}},
+    dna:{ author:"makers-factory", tags:["pattern","grid","dots","halftone","jitter"], why:"Halftone jitter-grid from t06_026 taste. One dot per cell, position randomized by per-cell hash. Jitter at 0 = perfect grid of dots. Jitter at 1 = scattered but still one-per-cell — the Poisson-like guarantee that prevents clumping." } },
+  { cat:"PP-063", date:"2026-08-15", type:"gizmo", title:"Joukowski Warp", tags:["Gizmo","Interactive"],
+    do_pixel:"cx = (x - 0.5) * scale + offset; cy = (y - 0.5) * scale; r2 = cx * cx + cy * cy + 0.001; jx = cx + cx / r2; jy = cy - cy / r2; 0.5 + 0.5 * sin(jx * freq + t * speed) * cos(jy * freq)",
+    params:{scale:{value:2,min:0.5,max:8},freq:{value:4,min:1,max:20},offset:{value:0.2,min:-0.5,max:0.5},speed:{value:0.5,min:0,max:3}},
+    dna:{ author:"makers-factory", tags:["warp","conformal","joukowski","airfoil","complex","animated"], why:"Joukowski conformal map: z + 1/z transforms circles into airfoil shapes. The offset parameter shifts the circle center off-origin, controlling asymmetry — at 0 it produces a flat plate, nonzero creates cambered airfoils. Visualised with sin*cos stripe pattern in the warped domain. Mined from Shadertoy conformal mapping and aerodynamics literature." } },
+  { cat:"PP-064", date:"2026-08-15", type:"gizmo", title:"Julia Set", tags:["Gizmo","Interactive"],
+    do_pixel:"ax = (x - 0.5) * zoom; ay = (y - 0.5) * zoom; bx = ax*ax - ay*ay + cr; by = 2.0*ax*ay + ci; ax = bx*bx - by*by + cr; ay = 2.0*bx*by + ci; bx = ax*ax - ay*ay + cr; by = 2.0*ax*ay + ci; ax = bx*bx - by*by + cr; ay = 2.0*bx*by + ci; bx = ax*ax - ay*ay + cr; by = 2.0*ax*ay + ci; ax = bx*bx - by*by + cr; ay = 2.0*bx*by + ci; bx = ax*ax - ay*ay + cr; by = 2.0*ax*ay + ci; ax = bx*bx - by*by + cr; ay = 2.0*bx*by + ci; bx = ax*ax - ay*ay + cr; by = 2.0*ax*ay + ci; ax = bx*bx - by*by + cr; ay = 2.0*bx*by + ci; bx = ax*ax - ay*ay + cr; by = 2.0*ax*ay + ci; ax = bx*bx - by*by + cr; ay = 2.0*bx*by + ci; bx = ax*ax - ay*ay + cr; by = 2.0*ax*ay + ci; ax = bx*bx - by*by + cr; ay = 2.0*bx*by + ci; bx = ax*ax - ay*ay + cr; by = 2.0*ax*ay + ci; ax = bx*bx - by*by + cr; ay = 2.0*bx*by + ci; bx = ax*ax - ay*ay + cr; by = 2.0*ax*ay + ci; ax = bx*bx - by*by + cr; ay = 2.0*bx*by + ci; bx = ax*ax - ay*ay + cr; by = 2.0*ax*ay + ci; ax = bx*bx - by*by + cr; ay = 2.0*bx*by + ci; d = ax*ax + ay*ay; (d == d) ? smoothstep(escape, 0.0, d) : 0.0",
+    params:{zoom:{value:3,min:0.5,max:10},cr:{value:-0.7,min:-2,max:2},ci:{value:0.27,min:-2,max:2},escape:{value:4,min:1,max:100}},
+    dna:{ author:"makers-factory", tags:["fractal","julia","iteration","complex"], why:"Julia set — 20 unrolled iterations of z^2+c where c=(cr,ci) is a constant parameter and z0=(x,y). Each c value reveals a different fractal coastline. Default cr=-0.7, ci=0.27 gives the classic dendrite Julia set. Slide cr/ci to explore the family — every point on the Mandelbrot boundary generates a connected Julia set." } },
+  { cat:"PP-065", date:"2026-08-15", type:"gizmo", title:"Kaleidoscope", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r = sqrt(dx * dx + dy * dy) * zoom; a = atan2(dy, dx) + t * spin; seg = 6.28318 / slices; a = a % seg; a = (a > seg * 0.5) ? seg - a : a; out_x = 0.5 + r * cos(a); out_y = 0.5 + r * sin(a)",
+    params:{slices:{value:6,min:2,max:24},zoom:{value:1,min:0.1,max:10},spin:{value:0.02,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["transform","polar","kaleidoscope","symmetry","animated"], why:"Polar fold — convert to polar, mod angle by TAU/slices, abs to mirror. UV remapping transform: says where to look, host does the looking. Corrected from generator to transform, session 22." } },
+  { cat:"PP-066", date:"2026-08-15", type:"gizmo", title:"Light Shaft", tags:["Gizmo","Interactive"],
+    do_pixel:"n = noise2(x * freq, t * drift); shaft = pow(clamp(n, 0.0, 1.0), focus); fade = 1.0 - abs(y - 0.5) * 2.0; clamp(shaft * clamp(fade, 0.0, 1.0), 0.0, 1.0)",
+    params:{freq:{value:5,min:1,max:20},drift:{value:0.02,min:0,max:0.3},focus:{value:3,min:0.5,max:8}},
+    dna:{ author:"makers-factory", tags:["noise","light","shaft","volumetric","animated"], why:"1D noise sampled along x, extruded vertically, pow-focused into shafts. The vertical fade gives them the 'god ray through trees' shape. Focus at 1 = broad wash; focus at 8 = needle shafts." } },
+  { cat:"PP-067", date:"2026-08-15", type:"gizmo", title:"Log Polar Warp", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r = sqrt(dx * dx + dy * dy) + 0.0001; a = atan2(dy, dx); lr = log(r) * scale; aa = a * arms; 0.5 + 0.5 * sin(lr + aa + t * speed)",
+    params:{scale:{value:3,min:0.5,max:15},arms:{value:3,min:1,max:12},speed:{value:0.3,min:0,max:3}},
+    dna:{ author:"makers-factory", tags:["pattern","spiral","polar","logarithmic","warp","animated"], why:"Log-polar coordinate transform: log(r) makes concentric circles equidistant on a log scale, adding the angle creates logarithmic spirals. Any horizontal pattern in log-polar space becomes a spiral in Cartesian. The arms param controls spiral count. Mined from Shadertoy conformal mapping techniques." } },
+  { cat:"PP-068", date:"2026-08-15", type:"gizmo", title:"Log Spiral", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r = sqrt(dx * dx + dy * dy) + 0.0001; th = atan2(dy, dx) + t * speed; lnr = log(r); residual = lnr / max(abs(growth), 0.01) - th; wrapped = residual - floor(residual / 6.28318 + 0.5) * 6.28318; d = abs(wrapped) * r; smoothstep(width, 0.0, d)",
+    params:{growth:{value:0.2,min:0.01,max:1},width:{value:0.05,min:0.01,max:0.2},speed:{value:0.3,min:0,max:2}},
+    dna:{ author:"makers-factory", tags:["pattern","spiral","logarithmic","SDF","nautilus","animated"], why:"Logarithmic spiral SDF: the curve r = exp(b*theta) appears in nautilus shells and galaxies. Distance computed by unwrapping log-polar coordinates — residual from the spiral equation, wrapped to the nearest branch via floor(r/2pi+0.5)*2pi. The abs(wrapped)*r term converts angular residual to true distance. Mined from LYGIA sdf/ and IQ SDF patterns." } },
+  { cat:"PP-069", date:"2026-08-15", type:"gizmo", title:"Mandala Fold", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r = sqrt(dx * dx + dy * dy) * zoom; a = atan2(dy, dx) + t * speed; seg = 6.28318 / slices; a = a - seg * floor(a / seg); a = (a > seg * 0.5) ? seg - a : a; r = abs(r - rings * floor(r / rings + 0.5)); 0.5 + 0.5 * sin(r * detail + a * detail)",
+    params:{slices:{value:8,min:2,max:24},rings:{value:0.3,min:0.05,max:1},zoom:{value:3,min:0.5,max:15},detail:{value:20,min:5,max:60},speed:{value:0.05,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","mandala","symmetry","fold","polar","animated"], why:"Mandala through radial + angular domain folding. Kaleidoscope folds angle only — this also folds radius, creating concentric mirror bands that produce mandala-like concentric ring symmetry. The radial fold abs(r - period * round(r/period)) reflects the pattern at each ring boundary. Mined from Shadertoy radial domain folding techniques." } },
+  { cat:"PP-06A", date:"2026-08-15", type:"gizmo", title:"Mandelbrot", tags:["Gizmo","Interactive"],
+    do_pixel:"cx = (x - 0.5) * zoom + panx; cy = (y - 0.5) * zoom + pany; ax = 0.0; ay = 0.0; bx = ax*ax - ay*ay + cx; by = 2.0*ax*ay + cy; ax = bx*bx - by*by + cx; ay = 2.0*bx*by + cy; bx = ax*ax - ay*ay + cx; by = 2.0*ax*ay + cy; ax = bx*bx - by*by + cx; ay = 2.0*bx*by + cy; bx = ax*ax - ay*ay + cx; by = 2.0*ax*ay + cy; ax = bx*bx - by*by + cx; ay = 2.0*bx*by + cy; bx = ax*ax - ay*ay + cx; by = 2.0*ax*ay + cy; ax = bx*bx - by*by + cx; ay = 2.0*bx*by + cy; bx = ax*ax - ay*ay + cx; by = 2.0*ax*ay + cy; ax = bx*bx - by*by + cx; ay = 2.0*bx*by + cy; bx = ax*ax - ay*ay + cx; by = 2.0*ax*ay + cy; ax = bx*bx - by*by + cx; ay = 2.0*bx*by + cy; bx = ax*ax - ay*ay + cx; by = 2.0*ax*ay + cy; ax = bx*bx - by*by + cx; ay = 2.0*bx*by + cy; bx = ax*ax - ay*ay + cx; by = 2.0*ax*ay + cy; ax = bx*bx - by*by + cx; ay = 2.0*bx*by + cy; bx = ax*ax - ay*ay + cx; by = 2.0*ax*ay + cy; ax = bx*bx - by*by + cx; ay = 2.0*bx*by + cy; bx = ax*ax - ay*ay + cx; by = 2.0*ax*ay + cy; ax = bx*bx - by*by + cx; ay = 2.0*bx*by + cy; d = ax*ax + ay*ay; (d == d) ? smoothstep(escape, 0.0, d) : 0.0",
+    params:{zoom:{value:3,min:0.1,max:10},panx:{value:-0.5,min:-2,max:2},pany:{value:0,min:-2,max:2},escape:{value:4,min:1,max:100}},
+    dna:{ author:"makers-factory", tags:["fractal","mandelbrot","iteration","complex"], why:"The Mandelbrot set — 20 unrolled iterations of z^2+c. z0=0, c=(x,y). Magnitude after iteration mapped to brightness via smoothstep. The one fractal everyone recognises. NaN guard handles overflow from escaped orbits (inf-inf). Zoom in by decreasing zoom param, navigate with panx/pany." } },
+  { cat:"PP-06B", date:"2026-08-15", type:"gizmo", title:"Marble Vein", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale; n = turbulence2(px + t * drift, py, octaves, 2.0, 0.5); v = sin(py * freq + n * warp); 0.5 + 0.5 * v",
+    params:{scale:{value:4,min:0.5,max:20},freq:{value:6,min:1,max:30},warp:{value:4,min:0,max:16},octaves:{value:4,min:1,max:8},drift:{value:0.01,min:0,max:0.2}},
+    dna:{ author:"makers-factory", tags:["noise","marble","texture","organic","animated"], why:"Marble veining: sin(coord + noise * amplitude) wraps noise into directional bands. From Book of Shaders ch.13 fBm applications — the canonical procedural marble. Freq controls vein density, warp controls how much noise distorts the straight bands." } },
+  { cat:"PP-06C", date:"2026-08-15", type:"gizmo", title:"Meander", tags:["Gizmo","Interactive"],
+    do_pixel:"wave = sin(x * freq + t * speed) * amp + sin(x * freq * 2.0 + t * speed * 1.3) * amp * 0.5; d = abs(y - 0.5 - wave); clamp(1.0 - d / thick, 0.0, 1.0)",
+    params:{freq:{value:12,min:2,max:40},amp:{value:0.15,min:0.01,max:0.4},thick:{value:0.03,min:0.005,max:0.15},speed:{value:0.05,min:0,max:1}},
+    dna:{ author:"makers-factory", tags:["pattern","wave","sine","river","line","animated"], why:"Two-harmonic sine wave as a distance-field line. The second harmonic at half amplitude gives it the asymmetric meander shape — rivers, Art Nouveau borders, EKG traces. Freq and amp set the character; thick sets the stroke." } },
+  { cat:"PP-06D", date:"2026-08-15", type:"gizmo", title:"Mirror Fold", tags:["Gizmo","Interactive"],
+    do_pixel:"fx = x * repeats; fy = y * repeats; mx = abs(fx - floor(fx * 0.5 + 0.5) * 2.0); my = abs(fy - floor(fy * 0.5 + 0.5) * 2.0); 0.5 + 0.5 * sin(mx * 6.28318 * detail + t * speed) * cos(my * 6.28318 * detail)",
+    params:{repeats:{value:4,min:1,max:12},detail:{value:2,min:0.5,max:10},speed:{value:0.3,min:0,max:2}},
+    dna:{ author:"makers-factory", tags:["pattern","mirror","fold","symmetry","tile","animated"], why:"Triangle-wave coordinate fold: abs(x - round(x/2)*2) creates a zigzag ramp that mirrors at every integer boundary. Applied to both axes, it tiles a pattern with seamless reflections — every other repeat is flipped, eliminating seams. The folded coordinates drive a sin*cos pattern. Mined from LYGIA space/ mirror-fold and domain repetition techniques." } },
+  { cat:"PP-06E", date:"2026-08-15", type:"gizmo", title:"Mobius Warp", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x - 0.5; py = y - 0.5; cx = radius * cos(t * speed); cy = radius * sin(t * speed); dr = 1.0 - strength * (cx * px - cy * py); di = 0.0 - strength * (cx * py + cy * px); den = dr * dr + di * di + 0.0001; nx = (px * dr + py * di) / den; ny = (py * dr - px * di) / den; 0.5 + 0.5 * noise2(nx * scale, ny * scale)",
+    params:{scale:{value:4,min:0.5,max:20},strength:{value:2,min:0,max:8},radius:{value:0.3,min:0,max:0.5},speed:{value:0.15,min:0,max:1}},
+    dna:{ author:"makers-factory", tags:["warp","mobius","conformal","complex","inversion","animated"], why:"Mobius transform f(z) = z / (1 - strength*c*z) applied as domain warp. A conformal (angle-preserving) map that produces fish-eye, circular inversions, and swirling distortions. The pole orbits the center creating animated warping. Mined from Shadertoy conformal mapping techniques and Nathan Reed's conformal texture mapping article." } },
+  { cat:"PP-06F", date:"2026-08-15", type:"gizmo", title:"Noise Bands", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale + t * drift; n = turbulence2(px, py, 4, 2.0, 0.5); floor(n * bands + 0.5) / bands",
+    params:{scale:{value:3,min:0.5,max:15},bands:{value:6,min:2,max:20},drift:{value:0.01,min:0,max:0.3}},
+    dna:{ author:"makers-factory", tags:["noise","quantize","bands","posterize"], why:"Quantized turbulence — floor(n*bands)/bands — from the t06_044 contour-banding taste and st_034 marching-squares idea. Continuous noise becomes a topographic map. Bands dial = how many altitude lines." } },
+  { cat:"PP-070", date:"2026-08-15", type:"gizmo", title:"Noise Contour", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale; n = turbulence2(px, py, 5, 2.0, 0.5); clamp(0.5 + 0.5 * cos(n * rings * 6.28318 + t * drift), 0.0, 1.0)",
+    params:{scale:{value:3,min:0.5,max:15},rings:{value:8,min:1,max:30},drift:{value:0.02,min:0,max:1}},
+    dna:{ author:"makers-factory", tags:["noise","contour","rings","topographic"], why:"cos(noise * freq) wraps the noise field into concentric contour rings. From t06_044 contour-banding core. NoiseBands quantizes; this one oscillates — same terrain, different cartography." } },
+  { cat:"PP-071", date:"2026-08-15", type:"gizmo", title:"Noise Edge", tags:["Gizmo","Interactive"],
+    do_pixel:"n = noise2(x * scale + t * drift, y * scale); smoothstep(threshold - edge_width, threshold + edge_width, n)",
+    params:{scale:{value:4,min:0.5,max:20},threshold:{value:0.5,min:0,max:1},edge_width:{value:0.02,min:0.001,max:0.2},drift:{value:0.01,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["noise","threshold","edge","coastline","animated"], why:"Noise field through a step function, creating hard boundaries like coastlines. The gate makes the diagram. st_010 the gate." } },
+  { cat:"PP-072", date:"2026-08-15", type:"gizmo", title:"Noise Mask", tags:["Gizmo","Interactive"],
+    do_pixel:"n1 = 0.5 + 0.5 * noise2(x * scale1 + t * drift, y * scale1); n2 = 0.5 + 0.5 * noise2(x * scale2 + 7.3 + t * drift * 0.6, y * scale2 + 3.7); n1 * n2",
+    params:{scale1:{value:3,min:0.5,max:20},scale2:{value:8,min:0.5,max:20},drift:{value:0.01,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["noise","mask","multiply","blend","animated"], why:"Two noise fields multiplied together, one as source one as mask. st_005/006 noise stack, multiply blend." } },
+  { cat:"PP-073", date:"2026-08-15", type:"gizmo", title:"Noise Swirl", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r = sqrt(dx * dx + dy * dy); a = atan2(dy, dx); sa = a + r * twist + t * speed; nx = r * cos(sa) * scale; ny = r * sin(sa) * scale; turbulence2(nx, ny, octaves, 2.0, 0.5)",
+    params:{scale:{value:4,min:0.5,max:20},twist:{value:6,min:0,max:20},octaves:{value:3,min:1,max:8},speed:{value:0.3,min:0,max:2}},
+    dna:{ author:"makers-factory", tags:["noise","spiral","swirl","polar","animated"], why:"Spiral-warped noise: maps to polar coordinates then twists angle proportional to radius before noise lookup. Creates vortex and galaxy-like patterns from plain turbulence. The twist parameter controls spiral tightness — at 0 it is radial, at high values it is a whirlpool." } },
+  { cat:"PP-074", date:"2026-08-15", type:"gizmo", title:"Octagon", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = abs(y - 0.5); d1 = min(-0.923880 * px + 0.382683 * py, 0.0); px = px + 2.0 * d1 * 0.923880; py = py - 2.0 * d1 * 0.382683; d2 = min(0.923880 * px + 0.382683 * py, 0.0); px = px - 2.0 * d2 * 0.923880; py = py - 2.0 * d2 * 0.382683; px = px - clamp(px, -0.414214 * radius, 0.414214 * radius); py = py - radius; d = sqrt(px * px + py * py) * (py > 0.0 ? 1.0 : -1.0); smoothstep(blur, 0.0, d)",
+    params:{radius:{value:0.25,min:0.05,max:0.48},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","octagon","polygon"], why:"Inigo Quilez 2D SDF — regular octagon via double reflection folding. Two reflections encode cos(45) and sin(45), reducing the shape to one sector. The stop sign. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-075", date:"2026-08-15", type:"gizmo", title:"Onion Rings", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = (x - 0.5) * scale; dy = (y - 0.5) * scale; r = sqrt(dx * dx + dy * dy); sp = max(spacing, 0.01); shell = abs(r - floor(r / sp + 0.5) * sp) - thickness; smoothstep(blur, 0.0, 0.0 - shell)",
+    params:{scale:{value:3,min:1,max:10},spacing:{value:0.5,min:0.1,max:2},thickness:{value:0.05,min:0.01,max:0.2},blur:{value:0.03,min:0.005,max:0.1}},
+    dna:{ author:"makers-factory", tags:["pattern","concentric","shells","SDF","rings"], why:"SDF shell outlines: takes a radial distance and creates infinite concentric shells via modular arithmetic — abs(d - round(d/spacing)*spacing) finds distance to the nearest shell boundary, subtracting thickness carves the ring width. The smoothstep anti-aliasing gives clean edges. A fundamental SDF operation: any distance field can be 'onioned'. Mined from LYGIA sdf/ onion operation and IQ SDF techniques." } },
+  { cat:"PP-076", date:"2026-08-15", type:"gizmo", title:"Op Art Wave", tags:["Gizmo","Interactive"],
+    do_pixel:"w = sin(x * freq + amp * sin(y * mod_freq + t * speed)); smoothstep(0.0 - edge, edge, w)",
+    params:{freq:{value:30,min:5,max:100},mod_freq:{value:4,min:1,max:20},amp:{value:2,min:0,max:10},edge:{value:0.05,min:0.01,max:0.5},speed:{value:0.3,min:0,max:3}},
+    dna:{ author:"makers-factory", tags:["pattern","op-art","stripes","wave","illusion","animated"], why:"Bridget Riley op-art: vertical stripes whose phase is modulated by a perpendicular sine wave. The frequency modulation creates an illusion of 3D undulation on a flat surface. Mined from Shadertoy op-art pattern studies. The smoothstep threshold gives hard black/white — the edge param walks it from sharp to soft." } },
+  { cat:"PP-077", date:"2026-08-15", type:"gizmo", title:"Orbital Dots", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x - 0.5; py = y - 0.5; val = 0.0; i = 1.0; r_orb = i / (orbits + 1.0); j = 0.0; j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); i = 2.0; r_orb = i / (orbits + 1.0); j = 0.0; j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); i = 3.0; r_orb = i / (orbits + 1.0); j = 0.0; j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); j = j + 1.0; a = j * 6.28318 / dots_per_orbit + t * speed * i; ox = cos(a) * r_orb; oy = sin(a) * r_orb; dd = sqrt((px - ox) * (px - ox) + (py - oy) * (py - oy)); val = val + smoothstep(dot_size, dot_size * 0.5, dd); clamp(val, 0.0, 1.0)",
+    params:{orbits:{value:5,min:1,max:10},dots_per_orbit:{value:8,min:3,max:20},dot_size:{value:0.02,min:0.005,max:0.1},speed:{value:0.02,min:0,max:0.3}},
+    dna:{ author:"makers-factory", tags:["pattern","orbital","dots","concentric","animated"], why:"Dots arranged on multiple concentric orbits with staggered phase. t06 orbital patterns." } },
+  { cat:"PP-078", date:"2026-08-15", type:"gizmo", title:"Oriented Box", tags:["Gizmo","Interactive"],
+    do_pixel:"ca = cos(angle); sa = sin(angle); qx = ca * (x - 0.5) + sa * (y - 0.5); qy = -sa * (x - 0.5) + ca * (y - 0.5); qx = abs(qx) - box_len; qy = abs(qy) - box_w * 0.5; mx = max(qx, 0.0); my = max(qy, 0.0); d = sqrt(mx * mx + my * my) + min(max(qx, qy), 0.0); smoothstep(blur, 0.0, d)",
+    params:{angle:{value:0.5,min:0,max:3.14},box_len:{value:0.15,min:0.03,max:0.4},box_w:{value:0.06,min:0.02,max:0.3},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","box","rectangle","rotated"], why:"Inigo Quilez 2D SDF — oriented box (rotated rectangle). A 2D rotation matrix aligns the coordinate system to the box's angle, then standard box SDF. Any rectangle at any angle — the selection marquee, the progress bar, the building footprint. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-079", date:"2026-08-15", type:"gizmo", title:"Oriented Vesica", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x - 0.5; py = y - 0.5; vx = 2.0 * cos(angle); vy = 2.0 * sin(angle); rx = vy * px - vx * py; ry = vx * px + vy * py; qx = 0.5 * abs(rx); qy = 0.5 * abs(ry); dv = 0.5 * (vlen * vlen - vw * vw) / vw; cnd = vlen * qx < dv * (qy - vlen) ? 1.0 : 0.0; hx = cnd > 0.5 ? 0.0 : -dv; hy = cnd > 0.5 ? vlen : 0.0; hz = cnd > 0.5 ? 0.0 : dv + vw; ex = qx - hx; ey = qy - hy; d = sqrt(ex * ex + ey * ey) - hz; smoothstep(blur, 0.0, d)",
+    params:{angle:{value:0.5,min:0,max:3.14159},vlen:{value:0.15,min:0.05,max:0.4},vw:{value:0.08,min:0.02,max:0.25},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","vesica","oriented","lens"], why:"Inigo Quilez 2D SDF — oriented vesica piscis. The regular Vesica is axis-aligned; this variant takes an angle parameter to rotate the lens shape freely. Uses a 2x2 rotation matrix to align the local frame. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-07A", date:"2026-08-15", type:"gizmo", title:"Parabola", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = y - 0.5; ik = 1.0 / curv; pp = ik * (py - 0.5 * ik) / 3.0; qq = 0.25 * ik * ik * px; hh = qq * qq - pp * pp * pp; sh = sqrt(max(hh, 0.0)); rarg = qq + sh; sgn_r = rarg > 0.0 ? 1.0 : -1.0; r1 = sgn_r * pow(max(abs(rarg), 0.000000001), 0.333333333); x1 = r1 + (abs(r1) > 0.0001 ? pp / r1 : 0.0); r2 = sqrt(max(pp, 0.000000001)); pr = pp * r2; aarg = clamp(qq / (abs(pr) > 0.000000001 ? pr : 0.000000001), -1.0, 1.0); x2 = 2.0 * r2 * cos(acos(aarg) / 3.0); xf = hh > 0.0 ? x1 : x2; dx = px - xf; dy = py - curv * xf * xf; sgn = px > xf ? 1.0 : -1.0; d = sqrt(dx * dx + dy * dy) * sgn; smoothstep(blur, 0.0, d)",
+    params:{curv:{value:2,min:0.5,max:8},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","parabola","curve","quadratic"], why:"Inigo Quilez 2D SDF — infinite parabola y = k*x^2. The closest point on a parabola requires solving a depressed cubic via Cardano's formula (h>0 branch) or the trigonometric method (h<=0 branch). Uses acos and cube root. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-07B", date:"2026-08-15", type:"gizmo", title:"Parabola Segment", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = y - 0.5; ik = pw * pw / ph; pp = ik * (ph - py - 0.5 * ik) / 3.0; qq = px * ik * ik / 4.0; hh = qq * qq - pp * pp * pp; sh = sqrt(max(hh, 0.0)); rarg = qq + sh; sgn_r = rarg > 0.0 ? 1.0 : -1.0; r1 = sgn_r * pow(max(abs(rarg), 0.000000001), 0.333333333); x1 = r1 + (abs(r1) > 0.0001 ? pp / r1 : 0.0); r2 = sqrt(max(pp, 0.000000001)); pr = pp * r2; aarg = clamp(qq / (abs(pr) > 0.000000001 ? pr : 0.000000001), -1.0, 1.0); x2 = 2.0 * r2 * cos(acos(aarg) / 3.0); xf = hh > 0.0 ? x1 : x2; xf = min(xf, pw); dx = px - xf; dy = py - ph + xf * xf / ik; sgn = ik * (py - ph) + px * px > 0.0 ? 1.0 : -1.0; d = sqrt(dx * dx + dy * dy) * sgn; smoothstep(blur, 0.0, d)",
+    params:{pw:{value:0.2,min:0.05,max:0.4},ph:{value:0.15,min:0.05,max:0.4},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","parabola","segment","arch"], why:"Inigo Quilez 2D SDF — bounded parabolic segment. Unlike the infinite Parabola, this clips to a finite width pw and height ph. Same depressed-cubic solver (Cardano + trig fallback) with an extra min(x, pw) clamp. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-07C", date:"2026-08-15", type:"gizmo", title:"Parallelogram", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x - 0.5; py = y - 0.5; npx = py < 0.0 ? -px : px; npy = py < 0.0 ? -py : py; wx = npx - skew; wy = npy - height; wx = wx - clamp(wx, -width, width); dww = wx * wx + wy * wy; dwy = -wy; ss = npx * height - npy * skew; spx = ss < 0.0 ? -npx : npx; spy = ss < 0.0 ? -npy : npy; vx = spx - width; vy = spy; dot_ve = vx * skew + vy * height; dot_ee = skew * skew + height * height + 0.0001; tt = clamp(dot_ve / dot_ee, -1.0, 1.0); vx = vx - skew * tt; vy = vy - height * tt; dvv = vx * vx + vy * vy; dv2 = width * height - abs(ss); finx = min(dww, dvv); finy = min(dwy, dv2); d = sqrt(finx) * (-finy > 0.0 ? 1.0 : -1.0); smoothstep(blur, 0.0, d)",
+    params:{width:{value:0.2,min:0.03,max:0.4},height:{value:0.15,min:0.03,max:0.3},skew:{value:0.08,min:0,max:0.3},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","parallelogram","skewed","quad"], why:"Inigo Quilez 2D SDF — parallelogram. A rectangle sheared by a skew offset. Width controls the horizontal extent, height the vertical, skew tilts the sides. The italic letter, the leaning wall, the wind-pushed flag. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-07D", date:"2026-08-15", type:"gizmo", title:"Pentagon", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = y - 0.5; d1 = min(-0.809017 * px + 0.587785 * py, 0.0); px = px + 2.0 * d1 * 0.809017; py = py - 2.0 * d1 * 0.587785; d2 = min(0.809017 * px + 0.587785 * py, 0.0); px = px - 2.0 * d2 * 0.809017; py = py - 2.0 * d2 * 0.587785; px = px - clamp(px, -radius * 0.726543, radius * 0.726543); py = py - radius; d = sqrt(px * px + py * py) * (py > 0.0 ? 1.0 : -1.0); smoothstep(blur, 0.0, d)",
+    params:{radius:{value:0.25,min:0.05,max:0.48},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","pentagon","polygon"], why:"Inigo Quilez 2D SDF — regular pentagon via double reflection folding. Two reflections reduce the full pentagon to a single sector, then distance to the nearest edge. The constants encode cos(72) and sin(72). Five-fold symmetry — the shape that can't tile. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-07E", date:"2026-08-15", type:"gizmo", title:"Pentagram", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = y - 0.5; d1 = max(0.809017 * px - 0.587785 * py, 0.0); px = px - 2.0 * d1 * 0.809017; py = py + 2.0 * d1 * 0.587785; d2 = max(-0.809017 * px - 0.587785 * py, 0.0); px = px + 2.0 * d2 * 0.809017; py = py + 2.0 * d2 * 0.587785; px = abs(px); py = py - radius; dp = px * 0.309017 + py * (-0.951057); tc = clamp(dp, 0.0, 0.726543 * radius); qx = px - 0.309017 * tc; qy = py + 0.951057 * tc; sg = 0.309017 * py + 0.951057 * px; d = sqrt(qx * qx + qy * qy) * (sg > 0.0 ? 1.0 : -1.0); smoothstep(blur, 0.0, d)",
+    params:{radius:{value:0.25,min:0.05,max:0.45},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","pentagram","star","five-pointed"], why:"Inigo Quilez 2D SDF — pentagram (five-pointed star). Uses max-reflections (outward folding) rather than min-reflections (inward folding) to create the concave star shape. The star that can be drawn in one stroke. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-07F", date:"2026-08-15", type:"gizmo", title:"Phase Field", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale; n = noise2(px, py); wave = 0.5 + 0.5 * sin(t * speed - n * phase); mask = clamp(-n * edge, 0.0, 1.0); clamp(wave * mask, 0.0, 1.0)",
+    params:{scale:{value:3,min:0.5,max:15},phase:{value:8,min:1,max:30},edge:{value:5,min:1,max:20},speed:{value:0.1,min:0,max:1}},
+    dna:{ author:"makers-factory", tags:["noise","phase","silhouette","organic","animated"], why:"The jellyfish chassis from t06_176 — one noise field, two jobs. The field defines the SHAPE (negative regions are visible, positive regions are invisible) and the PHASE (each point oscillates at its own noise-derived time). The silhouette pulses like a breathing creature." } },
+  { cat:"PP-080", date:"2026-08-15", type:"gizmo", title:"Pie", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = y - 0.5; sx = sin(angle * 0.5); cy = cos(angle * 0.5); l = sqrt(px * px + py * py) - radius; dp = px * sx + py * cy; cp = clamp(dp, 0.0, radius); mx = px - sx * cp; my = py - cy * cp; m = sqrt(mx * mx + my * my); sg = cy * px - sx * py; d = max(l, m * (sg > 0.0 ? 1.0 : -1.0)); smoothstep(blur, 0.0, d)",
+    params:{radius:{value:0.3,min:0.05,max:0.48},angle:{value:2.5,min:0.2,max:6.28},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","pie","sector","wedge"], why:"Inigo Quilez 2D SDF — circular sector (pie slice). Angle controls the opening in radians: pi/2 is a quarter, pi is a half, 2*pi is a full circle. The sector is symmetric about the vertical axis via abs(x). Useful for progress indicators, dial faces, and any radial mask. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-081", date:"2026-08-15", type:"gizmo", title:"Pinwheel", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; a = atan2(dy, dx) + t * speed; v = 0.5 + 0.5 * sin(a * blades); pow(v, sharpness)",
+    params:{blades:{value:6,min:2,max:24},sharpness:{value:5,min:0.5,max:20},speed:{value:0.05,min:0,max:1}},
+    dna:{ author:"makers-factory", tags:["pattern","pinwheel","rotation","angular","animated"], why:"Rotating pinwheel/windmill pattern. Rotational patterns." } },
+  { cat:"PP-082", date:"2026-08-15", type:"gizmo", title:"Planet Noise", tags:["Gizmo","Interactive"],
+    do_pixel:"cx = x - 0.5; cy = y - 0.5; r = sqrt(cx * cx + cy * cy); mask = r < 0.49 ? 1.0 : 0.0; sz = sqrt(max(0.25 - r * r, 0.0)) * 2.0; rx = cx * 2.0 * cos(t * drift) - sz * sin(t * drift); n = turbulence2(rx * scale, cy * 2.0 * scale, 4, 2.0, 0.5); land = n > sealevel ? 1.0 : 0.4; clamp(land * sz * mask, 0.0, 1.0)",
+    params:{scale:{value:4,min:1,max:15},sealevel:{value:0.45,min:0.1,max:0.8},drift:{value:0.005,min:0,max:0.05}},
+    dna:{ author:"makers-factory", tags:["noise","sphere","planet","terrain","animated"], why:"Spherical noise projection with sea-level clamp from t06_159 plate-tectonics taste. Noise sampled on a hemisphere surface, rotated for continental drift. The clamp IS the coastline — below sealevel is ocean (dark), above is land (bright). Limb darkening from the sphere z-coordinate." } },
+  { cat:"PP-083", date:"2026-08-15", type:"gizmo", title:"Polar Rose", tags:["Gizmo","Interactive"],
+    do_pixel:"cx = x - 0.5; cy = y - 0.5; a = atan2(cy, cx) + t * spin; dd = sqrt(cx * cx + cy * cy); r = size * abs(cos(petals * a)); clamp(1.0 - abs(dd - r) / thick, 0.0, 1.0)",
+    params:{petals:{value:5,min:2,max:12},size:{value:0.3,min:0.05,max:0.45},thick:{value:0.02,min:0.005,max:0.1},spin:{value:0.01,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","polar","rose","flower","radial","animated"], why:"Polar rose curve — r = cos(n*theta). From the curve-stitching / envelope family vocabulary (t06 batch 07). Even petals = 2n lobes, odd = n lobes." } },
+  { cat:"PP-084", date:"2026-08-15", type:"gizmo", title:"Polar Vortex", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r = sqrt(dx * dx + dy * dy); a = atan2(dy, dx); spiral = a * arms + r * twist * 6.28318 + t * speed; nz = noise2(x * 3.0 + t * 0.01, y * 3.0) * noise_amount * 6.28318; 0.5 + 0.5 * sin(spiral + nz)",
+    params:{arms:{value:5,min:1,max:16},twist:{value:3,min:0.5,max:20},noise_amount:{value:0.3,min:0,max:2},speed:{value:0.02,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","polar","spiral","vortex","noise","animated"], why:"Spiral arms in polar coordinates with noise perturbation. From t06 polar_vortex_disorder." } },
+  { cat:"PP-085", date:"2026-08-15", type:"gizmo", title:"Poly SDF", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = (x - 0.5) * scale; dy = (y - 0.5) * scale; r = sqrt(dx * dx + dy * dy); a = atan2(dy, dx); seg = 6.28318 / max(sides, 3.0); a = a - seg * floor(a / seg + 0.5); a = abs(a); edge = r * cos(a) - size * cos(seg * 0.5); smoothstep(blur, 0.0, 0.0 - edge)",
+    params:{sides:{value:6,min:3,max:12},size:{value:0.35,min:0.1,max:0.5},scale:{value:1,min:0.5,max:4},blur:{value:0.02,min:0.005,max:0.1}},
+    dna:{ author:"makers-factory", tags:["SDF","polygon","regular","shape","parameterized"], why:"Generalized N-gon SDF: the angle is folded into one sector (2pi/N width), then the distance to the polygon's flat edge is r*cos(a) - R*cos(pi/N). The sector fold uses round-to-nearest: floor(a/seg+0.5)*seg. Unlike the fixed Pentagon/Hexagon/Octagon gizmos, sides is a continuous parameter — fractional values produce interpolated shapes. Mined from LYGIA sdf/polySDF and IQ's polygon distance field." } },
+  { cat:"PP-086", date:"2026-08-15", type:"gizmo", title:"Pulse Lamp", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale; n = noise2(px, py); v = pow(sin(t * speed + n * 6.28318), 2.0); lamp = clamp(width / max(abs(n), 0.001), 0.0, 1.0); clamp(v * lamp, 0.0, 1.0)",
+    params:{scale:{value:3,min:0.5,max:15},width:{value:0.1,min:0.01,max:0.5},speed:{value:0.5,min:0,max:3}},
+    dna:{ author:"makers-factory", tags:["noise","glow","singularity","bioluminescent","animated"], why:"Travelling luminance from t06_186 dragonfly taste — the singularity IS the lamp. Where noise crosses zero, 1/abs(n) spikes to infinity, clamped to a glow band. sin^2(t + n*TAU) modulates the pulse as it travels along the noise zero-crossings. Division-by-zero as a highlighter." } },
+  { cat:"PP-087", date:"2026-08-15", type:"gizmo", title:"Quadratic Circle", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5) / qscale; py = abs(y - 0.5) / qscale; sw = py > px ? 1.0 : 0.0; tx = sw > 0.5 ? py : px; ty = sw > 0.5 ? px : py; aa = tx - ty; bb = tx + ty; cc = (2.0 * bb - 1.0) / 3.0; hh = aa * aa + cc * cc * cc; sh = sqrt(max(abs(hh), 0.0)); hma = abs(sh - aa); cb1 = (sh > aa ? 1.0 : -1.0) * pow(max(hma, 0.000000001), 0.333333333); cb2 = pow(max(sh + aa, 0.000000001), 0.333333333); t1 = cb1 - cb2; rz = sqrt(max(-cc, 0.000000001)); vc = cc * rz; aarg = clamp(aa / (abs(vc) > 0.000000001 ? vc : 0.000000001), -1.0, 1.0); vv = acos(aarg) / 3.0; t2 = -rz * (cos(vv) + sin(vv) * 1.732050808); tt = (hh > 0.0 ? t1 : t2) * 0.5; wx = -tt + 0.75 - tt * tt - tx; wy = tt + 0.75 - tt * tt - ty; d = sqrt(wx * wx + wy * wy) * (aa * aa * 0.5 + bb - 1.5 > 0.0 ? 1.0 : -1.0) * qscale; smoothstep(blur, 0.0, d)",
+    params:{qscale:{value:0.3,min:0.1,max:0.48},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","quadratic-circle","squircle"], why:"Inigo Quilez 2D SDF — quadratic circle (|x|+|y|=1 smoothed to x^2+y^2=1 at the axes). A squircle-family shape where the boundary interpolates between a diamond and a circle. Solves a depressed cubic for the nearest point. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-088", date:"2026-08-15", type:"gizmo", title:"Radial Bands", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - center_x; dy = y - center_y; d = sqrt(dx * dx + dy * dy); scaled = d * bands * 2.0; band_pos = scaled - floor(scaled); smoothstep(edge_width, 0.0, band_pos) * smoothstep(edge_width, 0.0, 1.0 - band_pos)",
+    params:{bands:{value:8,min:1,max:40},center_x:{value:0.5,min:0,max:1},center_y:{value:0.5,min:0,max:1},edge_width:{value:0.02,min:0.001,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","radial","bands","smoothstep","target"], why:"Distance from centre quantised into bands with smoothstep edges. From st_010 step/smoothstep in taste_07." } },
+  { cat:"PP-089", date:"2026-08-15", type:"gizmo", title:"Relief Map", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale; eps = 0.005; n0 = turbulence2(px, py, 5, 2.0, 0.5); nx = turbulence2(px + eps, py, 5, 2.0, 0.5); ny = turbulence2(px, py + eps, 5, 2.0, 0.5); dx2 = (nx - n0) / eps; dy2 = (ny - n0) / eps; light = dx2 * cos(angle) + dy2 * sin(angle); clamp(0.5 + light * depth, 0.0, 1.0)",
+    params:{scale:{value:3,min:0.5,max:15},angle:{value:0.785,min:0,max:6.28318},depth:{value:0.15,min:0.01,max:1}},
+    dna:{ author:"makers-factory", tags:["noise","relief","emboss","lighting","terrain"], why:"Directional derivative of turbulence along a light vector — the classic emboss/relief shading. Gradient dot light-direction gives hillshade. Angle rotates the sun. Depth dials the contrast from flat map to dramatic terrain." } },
+  { cat:"PP-08A", date:"2026-08-15", type:"gizmo", title:"Rhombus", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = abs(y - 0.5); ndot = width * width - height * height - 2.0 * px * width + 2.0 * py * height; denom = width * width + height * height; h = clamp(ndot / denom, -1.0, 1.0); ex = px - 0.5 * width * (1.0 - h); ey = py - 0.5 * height * (1.0 + h); d = sqrt(ex * ex + ey * ey) * ((px * height + py * width - width * height) > 0.0 ? 1.0 : -1.0); smoothstep(blur, 0.0, d)",
+    params:{width:{value:0.25,min:0.05,max:0.48},height:{value:0.35,min:0.05,max:0.48},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","rhombus","diamond"], why:"Inigo Quilez 2D SDF — rhombus (diamond). Width and height control the half-extents independently, giving any aspect ratio from a wide kite to a tall lozenge. The ndot trick (a.x*b.x - a.y*b.y) finds the nearest point on the edge without explicit line intersection. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-08B", date:"2026-08-15", type:"gizmo", title:"Ridge Noise", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale + t * drift; py = y * scale; amp = 1.0; freq_mult = 1.0; total = 0.0; weight = 1.0; n1 = noise2(px * freq_mult, py * freq_mult); r1 = 1.0 - abs(n1 * 2.0 - 1.0); r1 = r1 * r1 * weight; total = total + r1 * amp; weight = clamp(r1 * 2.0, 0.0, 1.0); amp = amp * 0.5; freq_mult = freq_mult * 2.0; n2 = noise2(px * freq_mult, py * freq_mult); r2 = 1.0 - abs(n2 * 2.0 - 1.0); r2 = r2 * r2 * weight; total = total + r2 * amp; weight = clamp(r2 * 2.0, 0.0, 1.0); amp = amp * 0.5; freq_mult = freq_mult * 2.0; n3 = noise2(px * freq_mult, py * freq_mult); r3 = 1.0 - abs(n3 * 2.0 - 1.0); r3 = r3 * r3 * weight; total = total + r3 * amp; weight = clamp(r3 * 2.0, 0.0, 1.0); amp = amp * 0.5; freq_mult = freq_mult * 2.0; n4 = noise2(px * freq_mult, py * freq_mult); r4 = 1.0 - abs(n4 * 2.0 - 1.0); r4 = r4 * r4 * weight; total = total + r4 * amp; weight = clamp(r4 * 2.0, 0.0, 1.0); amp = amp * 0.5; freq_mult = freq_mult * 2.0; n5 = noise2(px * freq_mult, py * freq_mult); r5 = 1.0 - abs(n5 * 2.0 - 1.0); r5 = r5 * r5 * weight; total = total + r5 * amp; clamp(total, 0.0, 1.0)",
+    params:{scale:{value:3,min:0.5,max:20},octaves:{value:5,min:1,max:8},drift:{value:0.01,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["noise","ridge","mountains","terrain","animated"], why:"Ridge noise: 1 - abs(noise*2-1) squared, sharp peaks smooth valleys. Mountains. From st_004 ridge variant in taste_07." } },
+  { cat:"PP-08C", date:"2026-08-15", type:"gizmo", title:"Ring Sector", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = y - 0.5; nx = sin(opening); ny = cos(opening); rx = nx * px - ny * py; ry = ny * px + nx * py; l = sqrt(rx * rx + ry * ry); d1 = abs(l - radius) - thick * 0.5; inner = max(0.0, abs(radius - ry) - thick * 0.5); d2 = sqrt(rx * rx + inner * inner) * (rx > 0.0 ? 1.0 : -1.0); d = max(d1, d2); smoothstep(blur, 0.0, d)",
+    params:{opening:{value:0.5,min:0.1,max:2.5},radius:{value:0.2,min:0.05,max:0.4},thick:{value:0.04,min:0.01,max:0.15},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","ring","annulus","sector"], why:"Inigo Quilez 2D SDF — ring sector with flat caps. Unlike Arc (which has round caps), this ring has squared-off ends at the opening. Opening controls the gap angle (small = nearly full ring, large = thin sliver), radius sets the curve, thick inflates the centreline. A dial indicator, a loading spinner, a gauge mark. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-08D", date:"2026-08-15", type:"gizmo", title:"Ripple Pool", tags:["Gizmo","Interactive"],
+    do_pixel:"val = 0.0; sx = cellnoise2(1.0, 0.5) * 0.8 + 0.1; sy = cellnoise2(0.5, 1.0) * 0.8 + 0.1; d = sqrt((x - sx) * (x - sx) + (y - sy) * (y - sy)); val = val + sin(d * frequency - t * speed) / (1.0 + d * decay); sx = cellnoise2(2.0, 1.5) * 0.8 + 0.1; sy = cellnoise2(1.5, 2.0) * 0.8 + 0.1; d = sqrt((x - sx) * (x - sx) + (y - sy) * (y - sy)); val = val + sin(d * frequency - t * speed * 1.1) / (1.0 + d * decay); sx = cellnoise2(3.0, 2.5) * 0.8 + 0.1; sy = cellnoise2(2.5, 3.0) * 0.8 + 0.1; d = sqrt((x - sx) * (x - sx) + (y - sy) * (y - sy)); val = val + sin(d * frequency - t * speed * 0.9) / (1.0 + d * decay); 0.5 + val / (sources * 0.5)",
+    params:{sources:{value:3,min:1,max:6},frequency:{value:25,min:5,max:100},decay:{value:3,min:0.5,max:15},speed:{value:0.1,min:0,max:2}},
+    dna:{ author:"makers-factory", tags:["pattern","ripple","wave","water","animated"], why:"Multiple circular ripples from random points with distance decay. Water ripple patterns." } },
+  { cat:"PP-08E", date:"2026-08-15", type:"gizmo", title:"Round Box", tags:["Gizmo","Interactive"],
+    do_pixel:"qx = abs(x - 0.5) - width + rounding; qy = abs(y - 0.5) - height + rounding; mx = (qx > 0 ? qx : 0); my = (qy > 0 ? qy : 0); d = min(max(qx, qy), 0.0) + sqrt(mx * mx + my * my) - rounding; smoothstep(blur, 0.0, d)",
+    params:{width:{value:0.3,min:0.02,max:0.48},height:{value:0.2,min:0.02,max:0.48},rounding:{value:0.05,min:0,max:0.2},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","box","rectangle","rounded"], why:"Inigo Quilez 2D SDF — rounded rectangle distance field. The fundamental panel/frame/badge building block. Rounding=0 recovers a sharp box. The distance field means blur controls edge softness exactly. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-08F", date:"2026-08-15", type:"gizmo", title:"Rounded Cross", tags:["Gizmo","Interactive"],
+    do_pixel:"sx = abs(x - 0.5) / scale; sy = abs(y - 0.5) / scale; k = 0.5 * (shape + 1.0 / shape); dx1 = sx - 1.0; dy1 = sy - k; d1 = k - sqrt(dx1 * dx1 + dy1 * dy1); dx2a = sx; dy2a = sy - shape; dx2b = sx - 1.0; dy2b = sy; dq1 = dx2a * dx2a + dy2a * dy2a; dq2 = dx2b * dx2b + dy2b * dy2b; d2 = sqrt(min(dq1, dq2)); d = (sx < 1.0 && sy < sx * (k - shape) + shape) ? d1 : d2; d = d * scale; smoothstep(blur, 0.0, d)",
+    params:{scale:{value:0.2,min:0.05,max:0.4},shape:{value:0.5,min:0.1,max:1.5},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","cross","rounded"], why:"Inigo Quilez 2D SDF — rounded cross. A plus sign with smooth circular elbows where the arms meet. Scale sets overall size, shape controls arm width vs length ratio (shape=1 gives square arms, shape<1 gives thin arms). The shape parameter also determines the elbow curvature. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-090", date:"2026-08-15", type:"gizmo", title:"Rounded X", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = abs(y - 0.5); s = min(px + py, width) * 0.5; d = sqrt((px - s) * (px - s) + (py - s) * (py - s)) - radius; smoothstep(blur, 0.0, d)",
+    params:{width:{value:0.35,min:0.1,max:0.6},radius:{value:0.06,min:0.005,max:0.15},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","cross","rounded"], why:"Inigo Quilez 2D SDF — X shape with rounded ends. The skeleton is the two diagonals y=x and y=-x, capped at width. Radius inflates the skeleton into a solid tube. Three statements, no conditionals, no trig — one of the cleanest SDF primitives. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-091", date:"2026-08-15", type:"gizmo", title:"Scaffold", tags:["Gizmo","Interactive"],
+    do_pixel:"gx = x * cells; gy = y * cells; fx = gx - floor(gx); fy = gy - floor(gy); hline = abs(fy - 0.5); vline = abs(fx - 0.5); d1 = abs(fx + fy - 1.0) * 0.7071; d2 = abs(fx - fy) * 0.7071; grid = min(min(hline, vline), min(d1, d2)); clamp(1.0 - grid / thick, 0.0, 1.0)",
+    params:{cells:{value:6,min:2,max:20},thick:{value:0.06,min:0.01,max:0.2}},
+    dna:{ author:"makers-factory", tags:["pattern","grid","scaffold","structural","geometric"], why:"Cross-braced grid — horizontal, vertical, and both diagonals. The structural skeleton that engineering drawings and truss bridges share. Thickness controls whether it reads as wireframe or lattice." } },
+  { cat:"PP-092", date:"2026-08-15", type:"gizmo", title:"Segment", tags:["Gizmo","Interactive"],
+    do_pixel:"ax = 0.5 - seg_len * cos(angle); ay = 0.5 - seg_len * sin(angle); bx = 0.5 + seg_len * cos(angle); by = 0.5 + seg_len * sin(angle); pax = x - ax; pay = y - ay; bax = bx - ax; bay = by - ay; hh = clamp((pax * bax + pay * bay) / (bax * bax + bay * bay), 0.0, 1.0); d = sqrt((pax - bax * hh) * (pax - bax * hh) + (pay - bay * hh) * (pay - bay * hh)) - thick; smoothstep(blur, 0.0, d)",
+    params:{angle:{value:0.3,min:0,max:6.28},seg_len:{value:0.2,min:0.05,max:0.45},thick:{value:0.02,min:0.005,max:0.08},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","segment","line","stroke"], why:"Inigo Quilez 2D SDF — line segment. Distance to a finite line defined by angle and half-length, inflated by thick to give visible width. The most fundamental stroke primitive — every line drawing starts here. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-093", date:"2026-08-15", type:"gizmo", title:"Sine Web", tags:["Gizmo","Interactive"],
+    do_pixel:"a = abs(sin(x * freq + t * speed)); b = abs(sin(y * freq + t * speed * 0.7)); c = abs(sin((x + y) * freq * 0.707 + t * speed * 1.3)); d = min(min(a, b), c); clamp(1.0 - d / thick, 0.0, 1.0)",
+    params:{freq:{value:15,min:3,max:50},thick:{value:0.1,min:0.02,max:0.4},speed:{value:0.05,min:0,max:1}},
+    dna:{ author:"makers-factory", tags:["pattern","sine","web","mesh","interference","animated"], why:"Three sine wave families (horizontal, vertical, diagonal) overlaid by min(). Where any sine hits zero, a line appears. The three families create a triangulated mesh that breathes as the phases drift." } },
+  { cat:"PP-094", date:"2026-08-15", type:"gizmo", title:"Skin Flash", tags:["Gizmo","Interactive"],
+    do_pixel:"gx = floor(x * grid_size); gy = floor(y * grid_size); jx = cellnoise2(gx * 1.3, gy * 2.7) * jitter; jy = cellnoise2(gx * 3.1, gy * 0.9) * jitter; cx = (gx + 0.5 + jx) / grid_size; cy = (gy + 0.5 + jy) / grid_size; dx = x - cx; dy = y - cy; d = sqrt(dx * dx + dy * dy) * grid_size; phase = cellnoise2(gx * 7.1, gy * 3.3) * 6.28318; pulse = 0.5 + 0.5 * sin(t * pulse_speed + phase); r = 0.3 * pulse; smoothstep(r, r * 0.5, d)",
+    params:{grid_size:{value:12,min:3,max:40},pulse_speed:{value:0.1,min:0,max:2},jitter:{value:0.3,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","organic","chromatophore","pulse","animated"], why:"Chromatophore-like pulsing circles on a jittered grid, each with its own phase. t06_026 cuttlefish flashing." } },
+  { cat:"PP-095", date:"2026-08-15", type:"gizmo", title:"Smoke Wisps", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale / stretch; n = turbulence2(px + t * speed, py - t * speed * 2.0, octaves, 2.0, 0.5); wisp = n * n; clamp(wisp * 1.5, 0.0, 1.0)",
+    params:{scale:{value:3,min:0.5,max:15},stretch:{value:3,min:1,max:10},octaves:{value:5,min:1,max:8},speed:{value:0.02,min:0,max:0.3}},
+    dna:{ author:"makers-factory", tags:["noise","smoke","wisps","turbulence","organic","animated"], why:"Turbulent noise stretched vertically for smoke-like wisps. Squaring darkens the field giving a low-alpha feel. t06_024 cigarette smoke." } },
+  { cat:"PP-096", date:"2026-08-15", type:"gizmo", title:"Smooth Blobs", tags:["Gizmo","Interactive"],
+    do_pixel:"ax = 0.35 + 0.1 * sin(t * 0.05); ay = 0.5; bx = 0.65 + 0.1 * cos(t * 0.07); by = 0.5; da = sqrt((x - ax) * (x - ax) + (y - ay) * (y - ay)); db = sqrt((x - bx) * (x - bx) + (y - by) * (y - by)); h = clamp(0.5 + 0.5 * (db - da) / k, 0.0, 1.0); d = (db * (1.0 - h) + da * h) - k * h * (1.0 - h); smoothstep(radius + 0.01, radius, d)",
+    params:{k:{value:0.15,min:0.01,max:0.5},radius:{value:0.15,min:0.05,max:0.4}},
+    dna:{ author:"makers-factory", tags:["sdf","smin","blobs","organic","animated"], why:"smin from st_001 in taste_07 — the skinner. Two blobs joined by smooth minimum. k is the skin. The connectivity is free. A character with no mesh — bones and a k." } },
+  { cat:"PP-097", date:"2026-08-15", type:"gizmo", title:"Solarize", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale; n = turbulence2(px, py, 5, 2.0, 0.5); clamp(sin(n * cycles * 3.14159), 0.0, 1.0)",
+    params:{scale:{value:3,min:0.5,max:15},cycles:{value:4,min:1,max:15}},
+    dna:{ author:"makers-factory", tags:["noise","solarize","inversion","psychedelic"], why:"sin(noise * freq) — the photographic solarization effect applied to turbulence. Where noise crosses a half-cycle boundary the tone inverts, creating the Sabattier-effect zones. Cycles dial = how many inversions fit in the noise range." } },
+  { cat:"PP-098", date:"2026-08-15", type:"gizmo", title:"Spiral Ripple", tags:["Gizmo","Interactive"],
+    do_pixel:"cx = x - 0.5; cy = y - 0.5; r = sqrt(cx * cx + cy * cy); theta = atan2(cy, cx); v = abs(sin(r * freq - theta * arms + t * speed)); clamp(v * max(1.0 - r * falloff, 0.0), 0.0, 1.0)",
+    params:{freq:{value:20,min:5,max:60},arms:{value:3,min:1,max:8},falloff:{value:2,min:0,max:5},speed:{value:0.05,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","spiral","ripple","polar","animated"], why:"Archimedean spiral with abs-fold from t06_144 potter's wheel taste. r*freq - theta*arms couples the radial rings to the angular twist. Arms=1 is a single spiral; arms=3 is a pinwheel of ripples. The fold (abs) doubles the crests." } },
+  { cat:"PP-099", date:"2026-08-15", type:"gizmo", title:"Spiral Tile", tags:["Gizmo","Interactive"],
+    do_pixel:"gx = floor(x * cells); gy = floor(y * cells); fx = x * cells - gx - 0.5; fy = y * cells - gy - 0.5; h = abs(sin(gx * 127.1 + gy * 311.7) * 43758.5453); h = h - floor(h); r = sqrt(fx * fx + fy * fy); a = atan2(fy, fx); 0.5 + 0.5 * sin(a * arms + r * twist - h * 6.28318 + t * speed)",
+    params:{cells:{value:6,min:2,max:20},arms:{value:3,min:1,max:10},twist:{value:8,min:1,max:30},speed:{value:0.5,min:0,max:3}},
+    dna:{ author:"makers-factory", tags:["pattern","spiral","pinwheel","tile","grid","animated"], why:"Per-cell pinwheel spirals: each grid cell has a spiral with arms radiating from its center, phase-offset by a per-cell hash. Arms param controls the number of spiral branches, twist controls how tightly they wind. The hash offset makes each cell spin differently, breaking repetition. Mined from Shadertoy spiral tile patterns." } },
+  { cat:"PP-09A", date:"2026-08-15", type:"gizmo", title:"Spiral Wrap", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r = sqrt(dx * dx + dy * dy); a = atan2(dy, dx); spiral = a * arms / 6.28318 + r * 10.0 - t * speed; frac = spiral - floor(spiral); smoothstep(thickness, 0.0, abs(frac - 0.5))",
+    params:{arms:{value:3,min:1,max:12},thickness:{value:0.1,min:0.01,max:0.5},speed:{value:0.03,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","spiral","archimedean","animated"], why:"Archimedean spiral with adjustable arm count and thickness. Spiral patterns in taste corpus." } },
+  { cat:"PP-09B", date:"2026-08-15", type:"gizmo", title:"Staircase", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale; n = noise2(px, py); g = x + n * warp; floor(g * steps) / steps",
+    params:{scale:{value:3,min:0.5,max:15},steps:{value:8,min:2,max:30},warp:{value:0.15,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","gradient","stepped","quantize","noise"], why:"Horizontal gradient quantized into steps, warped by noise. Clean steps at warp=0, organic terraced landscape as warp rises. The floor() operation is what st_003 (taste_07) called 'cell-ID from continuous space'." } },
+  { cat:"PP-09C", date:"2026-08-15", type:"gizmo", title:"Stairs", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x - 0.5; py = y - 0.5; bax = sw * sn; bay = sh * sn; cx1 = clamp(px, 0.0, bax); dx1 = px - cx1; dy1 = py; dd1 = dx1 * dx1 + dy1 * dy1; cx2 = clamp(py, 0.0, bay); dx2 = px - bax; dy2 = py - cx2; dd2 = dx2 * dx2 + dy2 * dy2; dd = min(dd1, dd2); ss = max(-py, px - bax) > 0.0 ? 1.0 : -1.0; dia = sqrt(sw * sw + sh * sh); rpx = (sw * px - sh * py) / dia; rpy = (sh * px + sw * py) / dia; rid = clamp(round(rpx / dia), 0.0, sn - 1.0); rpx = rpx - rid * dia; fpx = (sw * rpx + sh * rpy) / dia; fpy = (-sh * rpx + sw * rpy) / dia; hh = sh / 2.0; fpy = fpy - hh; sgnfpx = fpx > 0.0 ? 1.0 : -1.0; ss = fpy > hh * sgnfpx ? 1.0 : ss; npx = rid < 0.5 ? fpx : (fpx > 0.0 ? fpx : -fpx); npy = rid < 0.5 ? fpy : (fpx > 0.0 ? fpy : -fpy); cy3 = clamp(npy, -hh, hh); dx3 = npx; dy3 = npy - cy3; dd = min(dd, dx3 * dx3 + dy3 * dy3); cx4 = clamp(npx, 0.0, sw); dx4 = npx - cx4; dy4 = npy - hh; dd = min(dd, dx4 * dx4 + dy4 * dy4); d = sqrt(dd) * ss; smoothstep(blur, 0.0, d)",
+    params:{sw:{value:0.06,min:0.02,max:0.15},sh:{value:0.05,min:0.02,max:0.15},sn:{value:4,min:2,max:8},blur:{value:0.005,min:0.001,max:0.05}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","stairs","steps","staircase"], why:"Inigo Quilez 2D SDF — stairs (staircase). An n-step staircase shape built by rotating coordinates to align with the diagonal, snapping to the nearest step via round(), then measuring distance to the step edges. Uses two 2x2 rotation matrices (forward and inverse). Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-09D", date:"2026-08-15", type:"gizmo", title:"Star Poly", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = y - 0.5; d1 = max(0.809017 * px - 0.587785 * py, 0.0); px = px - 1.618034 * d1; py = py + 1.17557 * d1; d2 = max(-0.809017 * px - 0.587785 * py, 0.0); px = px + 1.618034 * d2; py = py + 1.17557 * d2; px = abs(px); py = py - radius; bax = ratio * 0.587785; bay = ratio * 0.809017 - 1.0; h = clamp((px * bax + py * bay) / (bax * bax + bay * bay), 0.0, radius); ex = px - bax * h; ey = py - bay * h; d = sqrt(ex * ex + ey * ey) * ((py * bax - px * bay) > 0.0 ? 1.0 : -1.0); smoothstep(blur, 0.0, d)",
+    params:{radius:{value:0.25,min:0.05,max:0.48},ratio:{value:0.4,min:0.15,max:0.85},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","star","polygon"], why:"Inigo Quilez 2D SDF — five-pointed star via polar sector folding and reflections. Radius controls outer size, ratio controls inner/outer proportion (low ratio = sharp spikes, high ratio = stubby pentagon). Two reflections fold the plane into one sector of the star. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-09E", date:"2026-08-15", type:"gizmo", title:"Stepped Noise", tags:["Gizmo","Interactive"],
+    do_pixel:"n = noise2(x * freq + t * drift, y * freq) * 0.5 + 0.5; floor(n * steps) / steps",
+    params:{freq:{value:4,min:1,max:20},steps:{value:5,min:2,max:16},drift:{value:0.02,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["noise","quantized","stepped","terraced","topographic"], why:"Quantized noise — floor(noise * N) / N produces discrete brightness plateaus. Like a topographic map of a noise field. Steps controls the number of distinct levels: 2 gives binary, 16 gives subtle banding. The simplest possible posterization of continuous noise. Source: Book of Shaders noise chapter, general posterization technique." } },
+  { cat:"PP-09F", date:"2026-08-15", type:"gizmo", title:"String Art", tags:["Gizmo","Interactive"],
+    do_pixel:"total = 0.0; px = x - 0.5; py = y - 0.5; i = 0.0; i = i + 1.0; a1 = i * 6.28318 / 20.0 + t * speed; a2 = i * 6.28318 / 20.0 * 1.618 - t * speed * 0.7; x1 = cos(a1) * radius1; y1 = sin(a1) * radius1; x2 = cos(a2) * radius2; y2 = sin(a2) * radius2; dx = x2 - x1; dy = y2 - y1; len = sqrt(dx * dx + dy * dy) + 0.0001; nx = -dy / len; ny = dx / len; dist = abs((px - x1) * nx + (py - y1) * ny); along = ((px - x1) * dx + (py - y1) * dy) / (len * len); seg = (along >= 0.0 && along <= 1.0) ? 1.0 : 0.0; total = total + seg * smoothstep(0.005, 0.0, dist); i = i + 1.0; a1 = i * 6.28318 / 20.0 + t * speed; a2 = i * 6.28318 / 20.0 * 1.618 - t * speed * 0.7; x1 = cos(a1) * radius1; y1 = sin(a1) * radius1; x2 = cos(a2) * radius2; y2 = sin(a2) * radius2; dx = x2 - x1; dy = y2 - y1; len = sqrt(dx * dx + dy * dy) + 0.0001; nx = -dy / len; ny = dx / len; dist = abs((px - x1) * nx + (py - y1) * ny); along = ((px - x1) * dx + (py - y1) * dy) / (len * len); seg = (along >= 0.0 && along <= 1.0) ? 1.0 : 0.0; total = total + seg * smoothstep(0.005, 0.0, dist); i = i + 1.0; a1 = i * 6.28318 / 20.0 + t * speed; a2 = i * 6.28318 / 20.0 * 1.618 - t * speed * 0.7; x1 = cos(a1) * radius1; y1 = sin(a1) * radius1; x2 = cos(a2) * radius2; y2 = sin(a2) * radius2; dx = x2 - x1; dy = y2 - y1; len = sqrt(dx * dx + dy * dy) + 0.0001; nx = -dy / len; ny = dx / len; dist = abs((px - x1) * nx + (py - y1) * ny); along = ((px - x1) * dx + (py - y1) * dy) / (len * len); seg = (along >= 0.0 && along <= 1.0) ? 1.0 : 0.0; total = total + seg * smoothstep(0.005, 0.0, dist); i = i + 1.0; a1 = i * 6.28318 / 20.0 + t * speed; a2 = i * 6.28318 / 20.0 * 1.618 - t * speed * 0.7; x1 = cos(a1) * radius1; y1 = sin(a1) * radius1; x2 = cos(a2) * radius2; y2 = sin(a2) * radius2; dx = x2 - x1; dy = y2 - y1; len = sqrt(dx * dx + dy * dy) + 0.0001; nx = -dy / len; ny = dx / len; dist = abs((px - x1) * nx + (py - y1) * ny); along = ((px - x1) * dx + (py - y1) * dy) / (len * len); seg = (along >= 0.0 && along <= 1.0) ? 1.0 : 0.0; total = total + seg * smoothstep(0.005, 0.0, dist); i = i + 1.0; a1 = i * 6.28318 / 20.0 + t * speed; a2 = i * 6.28318 / 20.0 * 1.618 - t * speed * 0.7; x1 = cos(a1) * radius1; y1 = sin(a1) * radius1; x2 = cos(a2) * radius2; y2 = sin(a2) * radius2; dx = x2 - x1; dy = y2 - y1; len = sqrt(dx * dx + dy * dy) + 0.0001; nx = -dy / len; ny = dx / len; dist = abs((px - x1) * nx + (py - y1) * ny); along = ((px - x1) * dx + (py - y1) * dy) / (len * len); seg = (along >= 0.0 && along <= 1.0) ? 1.0 : 0.0; total = total + seg * smoothstep(0.005, 0.0, dist); i = i + 1.0; a1 = i * 6.28318 / 20.0 + t * speed; a2 = i * 6.28318 / 20.0 * 1.618 - t * speed * 0.7; x1 = cos(a1) * radius1; y1 = sin(a1) * radius1; x2 = cos(a2) * radius2; y2 = sin(a2) * radius2; dx = x2 - x1; dy = y2 - y1; len = sqrt(dx * dx + dy * dy) + 0.0001; nx = -dy / len; ny = dx / len; dist = abs((px - x1) * nx + (py - y1) * ny); along = ((px - x1) * dx + (py - y1) * dy) / (len * len); seg = (along >= 0.0 && along <= 1.0) ? 1.0 : 0.0; total = total + seg * smoothstep(0.005, 0.0, dist); i = i + 1.0; a1 = i * 6.28318 / 20.0 + t * speed; a2 = i * 6.28318 / 20.0 * 1.618 - t * speed * 0.7; x1 = cos(a1) * radius1; y1 = sin(a1) * radius1; x2 = cos(a2) * radius2; y2 = sin(a2) * radius2; dx = x2 - x1; dy = y2 - y1; len = sqrt(dx * dx + dy * dy) + 0.0001; nx = -dy / len; ny = dx / len; dist = abs((px - x1) * nx + (py - y1) * ny); along = ((px - x1) * dx + (py - y1) * dy) / (len * len); seg = (along >= 0.0 && along <= 1.0) ? 1.0 : 0.0; total = total + seg * smoothstep(0.005, 0.0, dist); i = i + 1.0; a1 = i * 6.28318 / 20.0 + t * speed; a2 = i * 6.28318 / 20.0 * 1.618 - t * speed * 0.7; x1 = cos(a1) * radius1; y1 = sin(a1) * radius1; x2 = cos(a2) * radius2; y2 = sin(a2) * radius2; dx = x2 - x1; dy = y2 - y1; len = sqrt(dx * dx + dy * dy) + 0.0001; nx = -dy / len; ny = dx / len; dist = abs((px - x1) * nx + (py - y1) * ny); along = ((px - x1) * dx + (py - y1) * dy) / (len * len); seg = (along >= 0.0 && along <= 1.0) ? 1.0 : 0.0; total = total + seg * smoothstep(0.005, 0.0, dist); i = i + 1.0; a1 = i * 6.28318 / 20.0 + t * speed; a2 = i * 6.28318 / 20.0 * 1.618 - t * speed * 0.7; x1 = cos(a1) * radius1; y1 = sin(a1) * radius1; x2 = cos(a2) * radius2; y2 = sin(a2) * radius2; dx = x2 - x1; dy = y2 - y1; len = sqrt(dx * dx + dy * dy) + 0.0001; nx = -dy / len; ny = dx / len; dist = abs((px - x1) * nx + (py - y1) * ny); along = ((px - x1) * dx + (py - y1) * dy) / (len * len); seg = (along >= 0.0 && along <= 1.0) ? 1.0 : 0.0; total = total + seg * smoothstep(0.005, 0.0, dist); i = i + 1.0; a1 = i * 6.28318 / 20.0 + t * speed; a2 = i * 6.28318 / 20.0 * 1.618 - t * speed * 0.7; x1 = cos(a1) * radius1; y1 = sin(a1) * radius1; x2 = cos(a2) * radius2; y2 = sin(a2) * radius2; dx = x2 - x1; dy = y2 - y1; len = sqrt(dx * dx + dy * dy) + 0.0001; nx = -dy / len; ny = dx / len; dist = abs((px - x1) * nx + (py - y1) * ny); along = ((px - x1) * dx + (py - y1) * dy) / (len * len); seg = (along >= 0.0 && along <= 1.0) ? 1.0 : 0.0; total = total + seg * smoothstep(0.005, 0.0, dist); clamp(total / 3.0, 0.0, 1.0)",
+    params:{lines:{value:100,min:10,max:500},radius1:{value:0.3,min:0.05,max:0.5},radius2:{value:0.2,min:0.05,max:0.5},speed:{value:0.01,min:0,max:0.2}},
+    dna:{ author:"makers-factory", tags:["pattern","string-art","envelope","lines","animated"], why:"Line envelope between two counter-rotating parametric circles. Bright where lines accumulate. t06_012/042 line-envelope family." } },
+  { cat:"PP-0A0", date:"2026-08-15", type:"gizmo", title:"Striped Sphere", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; d = sqrt(dx * dx + dy * dy); circle = smoothstep(radius + 0.005, radius - 0.005, d); stripe = 0.5 + 0.5 * sin(y * stripe_freq * 6.28318 + t * speed); circle * stripe",
+    params:{radius:{value:0.3,min:0.05,max:0.5},stripe_freq:{value:20,min:2,max:60},speed:{value:0.05,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","sdf","sphere","stripes","masked","animated"], why:"2D SDF circle with horizontal stripes masked to the circle boundary. From t06_040 sphere + fabric." } },
+  { cat:"PP-0A1", date:"2026-08-15", type:"gizmo", title:"Sunburst", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; r = sqrt(dx * dx + dy * dy); a = atan2(dy, dx) + t * speed; ray = 0.5 + 0.5 * sin(a * rays); ray * smoothstep(0.6, 0.1, r)",
+    params:{rays:{value:8,min:2,max:30},speed:{value:0.3,min:0,max:2}},
+    dna:{ author:"makers-factory", tags:["pattern","radial","sunburst","rays","angular","animated"], why:"Radial ray pattern: sin(angle * N) produces N smooth rays emanating from center. The smoothstep radial fade creates a natural vignette — bright center fading to dark at edges. Speed rotates the whole pattern. A fundamental angular-domain primitive, complementary to concentric patterns like MoireRings. Mined from LYGIA generative/ angular functions." } },
+  { cat:"PP-0A2", date:"2026-08-15", type:"gizmo", title:"Superformula", tags:["Gizmo","Interactive"],
+    do_pixel:"cx = x - 0.5; cy = y - 0.5; a = atan2(cy, cx) + t * spin; dd = sqrt(cx * cx + cy * cy); ta = pow(abs(cos(sym * a / 4.0)), n2); tb = pow(abs(sin(sym * a / 4.0)), n3); sf = pow(ta + tb + 0.0001, -1.0 / n1) * size; clamp(1.0 - abs(dd - sf) / edge, 0.0, 1.0)",
+    params:{sym:{value:6,min:1,max:12},n1:{value:1,min:0.1,max:10},n2:{value:1,min:0.1,max:10},n3:{value:1,min:0.1,max:10},size:{value:0.25,min:0.05,max:0.45},edge:{value:0.02,min:0.005,max:0.1},spin:{value:0.005,min:0,max:0.2}},
+    dna:{ author:"makers-factory", tags:["pattern","polar","superformula","shape","organic","animated"], why:"Superformula from st_026 in taste_07. Six numbers generate circles, squares, stars, starfish, diatoms, flowers. All from one equation." } },
+  { cat:"PP-0A3", date:"2026-08-15", type:"gizmo", title:"Tan Ridge", tags:["Gizmo","Interactive"],
+    do_pixel:"n = noise2(x * nscale, y * nscale); v = tan(x * freq + n * warp) * tan(y * freq + n * warp); clamp(0.5 + v * gain, 0.0, 1.0)",
+    params:{freq:{value:10,min:2,max:40},nscale:{value:3,min:0.5,max:15},warp:{value:3,min:0,max:10},gain:{value:0.05,min:0.01,max:0.3}},
+    dna:{ author:"makers-factory", tags:["pattern","tangent","ridge","grid","noise"], why:"tan(x)*tan(y) with noise injected into both arguments — from t06_204. Where either tangent crosses zero: a ridge. Where both poles align: a bright spike. The noise warps the grid into a cracked-glaze / crazed-glass pattern. Gain keeps the spikes under control." } },
+  { cat:"PP-0A4", date:"2026-08-15", type:"gizmo", title:"Ten Print", tags:["Gizmo","Interactive"],
+    do_pixel:"gx = floor(x * cols); gy = floor(y * cols); fx = x * cols - gx; fy = y * cols - gy; h = abs(sin(gx * 127.1 + gy * 311.7 + floor(t) * 43.17) * 43758.5453); h = h - floor(h); d1 = abs(fx - fy) * 0.7071; d2 = abs(fx + fy - 1.0) * 0.7071; d = (h < 0.5) ? d1 : d2; smoothstep(width, 0.0, d)",
+    params:{cols:{value:16,min:4,max:40},width:{value:0.06,min:0.01,max:0.2}},
+    dna:{ author:"makers-factory", tags:["pattern","maze","random","diagonal","retro"], why:"The 10 PRINT maze: random / or \\ per cell, the Commodore 64 one-liner. From Book of Shaders ch.10 — where random meets pattern. Each cell flips a coin and draws one diagonal. The emergent paths and loops are the magic. floor(t) in hash lets it reshuffle per frame." } },
+  { cat:"PP-0A5", date:"2026-08-15", type:"gizmo", title:"Tidal Erosion", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale + t * drift; py = y * scale; base = noise2(px, py); detail = noise2(px * 4.0, py * 4.0); eroded = base - detail * erosion; fine = noise2(px * 8.0, py * 8.0); eroded = eroded - fine * erosion * 0.3; clamp(eroded * 0.5 + 0.5, 0.0, 1.0)",
+    params:{scale:{value:4,min:0.5,max:20},erosion:{value:0.5,min:0,max:2},drift:{value:0.01,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["noise","erosion","tidal","terrain","animated"], why:"Layered noise at different scales subtracted to create erosion-like patterns. Gallery-ready per Robbo crit. From t06 tidal_erosion_field." } },
+  { cat:"PP-0A6", date:"2026-08-15", type:"gizmo", title:"Trapezoid", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = y - 0.5; k1x = top_w; k1y = height; k2x = top_w - bot_w; k2y = 2.0 * height; tw = py < 0.0 ? bot_w : top_w; cax = px - min(px, tw); cay = abs(py) - height; dpk = (k1x - px) * k2x + (k1y - py) * k2y; dk2 = k2x * k2x + k2y * k2y + 0.0001; tc = clamp(dpk / dk2, 0.0, 1.0); cbx = px - k1x + k2x * tc; cby = py - k1y + k2y * tc; s = (cbx < 0.0 && cay < 0.0) ? -1.0 : 1.0; dca = cax * cax + cay * cay; dcb = cbx * cbx + cby * cby; d = s * sqrt(min(dca, dcb)); smoothstep(blur, 0.0, d)",
+    params:{bot_w:{value:0.2,min:0.03,max:0.4},top_w:{value:0.12,min:0.03,max:0.4},height:{value:0.15,min:0.03,max:0.3},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","trapezoid","polygon","tapered"], why:"Inigo Quilez 2D SDF — trapezoid. A four-sided shape with parallel top and bottom edges of different widths (bot_w, top_w), connected by sloped sides of height. The keystone, the bucket, the perspective vanishing box. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-0A7", date:"2026-08-15", type:"gizmo", title:"Triangle", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5) / radius - 1.0; py = (y - 0.5) / radius + 0.57735; cond = px + 1.732050 * py; nx = cond > 0.0 ? (px - 1.732050 * py) * 0.5 : px; ny = cond > 0.0 ? (-1.732050 * px - py) * 0.5 : py; nx = nx - clamp(nx, -2.0, 0.0); d = -sqrt(nx * nx + ny * ny) * (ny > 0.0 ? 1.0 : -1.0) * radius; smoothstep(blur, 0.0, d)",
+    params:{radius:{value:0.2,min:0.05,max:0.35},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","triangle","equilateral","polygon"], why:"Inigo Quilez 2D SDF — equilateral triangle via conditional reflection. One reflection folds the plane in half, then distance to the nearest edge gives the exact SDF. The simplest regular polygon and the structural unit of every mesh. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-0A8", date:"2026-08-15", type:"gizmo", title:"Triangle Tile", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale * 1.1547; sk = py - px * 0.5; ix = floor(px); iy = floor(sk); fx = px - ix; fy = sk - iy; tri = (fx + fy > 1.0) ? 1.0 : 0.0; tfx = (tri > 0.5) ? (1.0 - fx) : fx; tfy = (tri > 0.5) ? (1.0 - fy) : fy; cx = ix + tri; cy = iy; h = abs(sin(cx * 127.1 + cy * 311.7 + tri * 57.29) * 43758.5453); h = h - floor(h); ed = min(tfx, min(tfy, 1.0 - tfx - tfy)); mortar = smoothstep(0.0, gap, ed); h * mortar",
+    params:{scale:{value:8,min:2,max:30},gap:{value:0.05,min:0.01,max:0.15}},
+    dna:{ author:"makers-factory", tags:["pattern","tile","triangle","grid","geometric"], why:"Equilateral triangle tiling: skewed coordinate system splits each parallelogram cell into two triangles via the fx+fy>1 test. Per-cell hash gives random brightness. The dual of the hexagonal grid — HexGrid draws hexagons, TriangleTile draws the triangles between their centres." } },
+  { cat:"PP-0A9", date:"2026-08-15", type:"gizmo", title:"Truchet Tile", tags:["Gizmo","Interactive"],
+    do_pixel:"gx = floor(x * cells); gy = floor(y * cells); fx = x * cells - gx; fy = y * cells - gy; h = abs(sin(gx * 127.1 + gy * 311.7) * 43758.5453); h = h - floor(h); s = clamp((h - bias) * 10000.0, 0.0, 1.0); fx2 = fx * (1.0 - s) + (1.0 - fx) * s; d1 = abs(sqrt(fx2 * fx2 + (fy - 1.0) * (fy - 1.0)) - radius); d2 = abs(sqrt((fx2 - 1.0) * (fx2 - 1.0) + fy * fy) - radius); d = min(d1, d2); clamp(1.0 - d / width, 0.0, 1.0)",
+    params:{cells:{value:8,min:2,max:30},bias:{value:0.5,min:0,max:1},radius:{value:0.5,min:0.1,max:0.9},width:{value:0.08,min:0.01,max:0.3}},
+    dna:{ author:"makers-factory", tags:["pattern","grid","truchet","tile","textile"], why:"Truchet tiling from st_018 in taste_07. One arc per cell, one coin flip. Radius at 0.5 = circles close. Line thickness walks it from line to mass. 'Incredibly tactile — designing clothing patterns, materials, prints' — Robbo." } },
+  { cat:"PP-0AA", date:"2026-08-15", type:"gizmo", title:"Truchet Tri State", tags:["Gizmo","Interactive"],
+    do_pixel:"gx = floor(x * cells); gy = floor(y * cells); fx = x * cells - gx; fy = y * cells - gy; h = abs(sin(gx * 127.1 + gy * 311.7) * 43758.5453); h = h - floor(h); state = floor(h * 3.0); da = min(abs(sqrt(fx * fx + (fy - 1.0) * (fy - 1.0)) - 0.5), abs(sqrt((fx - 1.0) * (fx - 1.0) + fy * fy) - 0.5)); db = min(abs(sqrt(fx * fx + fy * fy) - 0.5), abs(sqrt((fx - 1.0) * (fx - 1.0) + (fy - 1.0) * (fy - 1.0)) - 0.5)); dc = abs(sqrt((fx - 0.5) * (fx - 0.5) + (fy - 0.5) * (fy - 0.5)) - 0.25); d = (state < 1.0) ? da : ((state < 2.0) ? db : dc); smoothstep(width, 0.0, d)",
+    params:{cells:{value:8,min:2,max:30},width:{value:0.06,min:0.01,max:0.2}},
+    dna:{ author:"makers-factory", tags:["pattern","truchet","tile","three-state","grid"], why:"Three-state Truchet tiling: each cell randomly picks one of three configurations — arc pair A (corners 0,1 and 1,0), arc pair B (corners 0,0 and 1,1), or a centred circle. The third state breaks the binary monotony of standard Truchet, creating dead-ends and islands in the path network. Mined from Shadertoy multi-state Truchet explorations." } },
+  { cat:"PP-0AB", date:"2026-08-15", type:"gizmo", title:"Truchet Weave", tags:["Gizmo","Interactive"],
+    do_pixel:"gx = floor(x * cells); gy = floor(y * cells); fx = x * cells - gx; fy = y * cells - gy; h = abs(sin(gx * 127.1 + gy * 311.7) * 43758.5453); h = h - floor(h); da1 = abs(sqrt(fx * fx + (fy - 1.0) * (fy - 1.0)) - 0.5); da2 = abs(sqrt((fx - 1.0) * (fx - 1.0) + fy * fy) - 0.5); da = min(da1, da2); db1 = abs(sqrt(fx * fx + fy * fy) - 0.5); db2 = abs(sqrt((fx - 1.0) * (fx - 1.0) + (fy - 1.0) * (fy - 1.0)) - 0.5); db = min(db1, db2); fa = smoothstep(width, 0.0, da); fb = smoothstep(width, 0.0, db); s = (h > 0.5) ? 1.0 : 0.0; over = fa * (1.0 - s) + fb * s; under = fb * (1.0 - s) + fa * s; over + under * (1.0 - over) * 0.4",
+    params:{cells:{value:8,min:2,max:30},width:{value:0.08,min:0.01,max:0.3}},
+    dna:{ author:"makers-factory", tags:["pattern","truchet","weave","textile","grid"], why:"Intertwined Truchet arcs: both arc pairs drawn per cell with over-under occlusion. The hash determines which pair is 'over' (full brightness) vs 'under' (40% brightness, occluded by the over). Creates a woven fabric illusion from the same math as TruchetTile. Mined from Smith (1987) and Shadertoy Truchet variations." } },
+  { cat:"PP-0AC", date:"2026-08-15", type:"gizmo", title:"Tunnel", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = -(y - 0.5); qx = px - tunnel_w; qy = py - tunnel_h; mx1 = max(qx, 0.0); d1 = mx1 * mx1 + qy * qy; lp = sqrt(px * px + py * py); qx2 = py > 0.0 ? qx : lp - tunnel_w; my2 = max(qy, 0.0); d2 = qx2 * qx2 + my2 * my2; dd = sqrt(min(d1, d2)); d = max(qx2, qy) < 0.0 ? -dd : dd; smoothstep(blur, 0.0, d)",
+    params:{tunnel_w:{value:0.15,min:0.03,max:0.4},tunnel_h:{value:0.1,min:0.03,max:0.3},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","tunnel","arch","gateway"], why:"Inigo Quilez 2D SDF — tunnel (arch shape). A rectangle with a semicircular top — the tunnel mouth, the cathedral window, the archway. The semicircle smoothly joins the straight walls. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-0AD", date:"2026-08-15", type:"gizmo", title:"Tunnel Zoom", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; a = atan2(dy, dx); r = sqrt(dx * dx + dy * dy) + 0.0001; angular = 0.5 + 0.5 * sin(a * rays); radial = 0.5 + 0.5 * sin(depth / r - t * speed); angular * radial",
+    params:{rays:{value:12,min:2,max:40},depth:{value:5,min:1,max:20},speed:{value:0.1,min:0,max:2}},
+    dna:{ author:"makers-factory", tags:["pattern","tunnel","radial","zoom","animated"], why:"Radial lines from centre with sin modulation creating a tunnel fly-through. t06_046 warp tunnel." } },
+  { cat:"PP-0AE", date:"2026-08-15", type:"gizmo", title:"Turbulence Warp", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale + t * drift; py = y * scale; n = turbulence2(px, py, octaves, 2.0, 0.5); abs(n * 2.0 - 1.0)",
+    params:{scale:{value:4,min:0.5,max:20},octaves:{value:5,min:1,max:8},drift:{value:0.01,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["noise","turbulence","fire","animated"], why:"abs(noise) gives turbulence/fire look. One abs() is the difference between a cloud and a fire. From st_004 turbulence fold in taste_07." } },
+  { cat:"PP-0AF", date:"2026-08-15", type:"gizmo", title:"Twist Grid", tags:["Gizmo","Interactive"],
+    do_pixel:"cx = floor(x * cols); cy = floor(y * rows); fx = x * cols - cx; fy = y * rows - cy; dc = sqrt((cx / cols - 0.5) * (cx / cols - 0.5) + (cy / rows - 0.5) * (cy / rows - 0.5)); angle = dc * twist + t * speed; ca = cos(angle); sa = sin(angle); rx = (fx - 0.5) * ca - (fy - 0.5) * sa; ry = (fx - 0.5) * sa + (fy - 0.5) * ca; smoothstep(size + 0.01, size, max(abs(rx), abs(ry)))",
+    params:{cols:{value:10,min:3,max:30},rows:{value:10,min:3,max:30},twist:{value:6,min:0,max:30},speed:{value:0.02,min:0,max:0.5},size:{value:0.35,min:0.1,max:0.49}},
+    dna:{ author:"makers-factory", tags:["pattern","grid","rotation","twist","animated"], why:"Per-tile rotation proportional to distance from grid centre. Squares become diamonds become a spiral vortex. The 2D rotation matrix applied to tile-local coordinates — what Book of Shaders calls 'rotating the coordinate system, not the shape.' Twist controls radial rotation rate, speed animates the whole field." } },
+  { cat:"PP-0B0", date:"2026-08-15", type:"gizmo", title:"Uneven Capsule", tags:["Gizmo","Interactive"],
+    do_pixel:"px = abs(x - 0.5); py = y - 0.5; bb = (bot_r - top_r) / height; aa = sqrt(max(1.0 - bb * bb, 0.0)); k = px * (-bb) + py * aa; d1 = sqrt(px * px + py * py) - bot_r; dy2 = py - height; d2 = sqrt(px * px + dy2 * dy2) - top_r; d3 = px * aa + py * bb - bot_r; d = k < 0.0 ? d1 : (k > aa * height ? d2 : d3); smoothstep(blur, 0.0, d)",
+    params:{bot_r:{value:0.1,min:0.02,max:0.25},top_r:{value:0.05,min:0.02,max:0.2},height:{value:0.15,min:0.05,max:0.35},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","capsule","pill","tapered"], why:"Inigo Quilez 2D SDF — uneven capsule. Two semicircles of different radii (bot_r, top_r) connected by tangent lines, separated vertically by height. A tapered pill shape — the bone, the limb, the connector between thick and thin. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-0B1", date:"2026-08-15", type:"gizmo", title:"Vein Network", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale; eps = 0.01; n0 = turbulence2(px, py, 4, 2.0, 0.5); nx = turbulence2(px + eps, py, 4, 2.0, 0.5); ny = turbulence2(px, py + eps, 4, 2.0, 0.5); gx2 = (nx - n0) / eps; gy2 = (ny - n0) / eps; grad = sqrt(gx2 * gx2 + gy2 * gy2); clamp(grad * gain, 0.0, 1.0)",
+    params:{scale:{value:3,min:0.5,max:15},gain:{value:0.3,min:0.05,max:2}},
+    dna:{ author:"makers-factory", tags:["noise","gradient","vein","edge","organic"], why:"Gradient magnitude of turbulence — the finite-difference derivative finds where the noise field changes fastest. Those are the edges, ridges, veins. Three noise lookups per pixel (center, +dx, +dy) to approximate the partial derivatives." } },
+  { cat:"PP-0B2", date:"2026-08-15", type:"gizmo", title:"Vesica", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x - 0.5; py = y - 0.5; d1 = sqrt((px + sep) * (px + sep) + py * py) - radius; d2 = sqrt((px - sep) * (px - sep) + py * py) - radius; d = max(d1, d2); smoothstep(blur, 0.0, d)",
+    params:{sep:{value:0.15,min:0,max:0.35},radius:{value:0.3,min:0.1,max:0.48},blur:{value:0.01,min:0.001,max:0.1}},
+    dna:{ author:"makers-factory", tags:["sdf","shape","vesica","lens","intersection"], why:"Vesica piscis — the lens formed by intersecting two circles. SDF intersection via max(d1,d2). Sep controls the gap between circle centres: sep=0 collapses to a full circle, sep approaching radius thins to a sliver. The sacred geometry shape that keeps showing up in Gothic windows and Venn diagrams. Source: iquilezles.org/articles/distfunctions2d" } },
+  { cat:"PP-0B3", date:"2026-08-15", type:"gizmo", title:"Voronoi Glow", tags:["Gizmo","Interactive"],
+    do_pixel:"f1 = voronoi2(x * scale + t * drift, y * scale, 1, jitter); f2 = voronoi2(x * scale + t * drift, y * scale, 2, jitter); ratio = f1 / max(f2, 0.001); glow = pow(1.0 - clamp(ratio, 0.0, 1.0), sharpness); glow",
+    params:{scale:{value:6,min:1,max:25},sharpness:{value:3,min:0.5,max:10},jitter:{value:1,min:0,max:1},drift:{value:0.01,min:0,max:0.2}},
+    dna:{ author:"makers-factory", tags:["voronoi","glow","cellular","edges","animated"], why:"Voronoi edge glow from F1/F2 ratio. At cell centers F1/F2 approaches 0 (dark), at edges it approaches 1 (bright). The pow(1-ratio, sharpness) inversion makes edges glow. CrackedMud uses F2-F1 for hard crack lines; this uses the ratio for soft luminous edges. Mined from Shadertoy voronoi techniques." } },
+  { cat:"PP-0B4", date:"2026-08-15", type:"gizmo", title:"Voronoi Rings", tags:["Gizmo","Interactive"],
+    do_pixel:"d = voronoi2(x * scale, y * scale, 0, jitter); clamp(0.5 + 0.5 * sin(d * rings + t * speed), 0.0, 1.0)",
+    params:{scale:{value:5,min:1,max:20},rings:{value:15,min:2,max:50},jitter:{value:1,min:0,max:1},speed:{value:0.05,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","voronoi","rings","contour","crystal","animated"], why:"Voronoi distance field wrapped through sin() — from t06_244 crystallized taste. Each cell gets concentric rings like a topographic map of a crystal lattice. The sharp creases at Voronoi seams are free — they come from the distance function discontinuity." } },
+  { cat:"PP-0B5", date:"2026-08-15", type:"gizmo", title:"Warped FBM", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * scale; py = y * scale; qx = turbulence2(px + t * speed, py, 3, 2.0, 0.5); qy = turbulence2(px + 5.2, py + 1.3, 3, 2.0, 0.5); turbulence2(px + warp * qx, py + warp * qy, octaves, 2.0, 0.5)",
+    params:{scale:{value:3,min:0.5,max:15},warp:{value:3,min:0,max:12},octaves:{value:4,min:1,max:8},speed:{value:0.02,min:0,max:0.3}},
+    dna:{ author:"makers-factory", tags:["noise","warp","fbm","cloud","organic","animated"], why:"Warped fBm: turbulence warps turbulence — f(p) = fbm(p + fbm(p)). From Book of Shaders ch.13. DomainWarp uses noise2 (single-octave, smooth) for warping; WarpedFBM uses turbulence2 (multi-octave, detailed) for richer, more organic cloud-like structures with deeper self-similarity." } },
+  { cat:"PP-0B6", date:"2026-08-15", type:"gizmo", title:"Wave Mesh", tags:["Gizmo","Interactive"],
+    do_pixel:"wx = 0.5 + 0.5 * sin(x * freq_x * 6.28318 + t * speed); wy = 0.5 + 0.5 * sin(y * freq_y * 6.28318 + t * speed * 0.7); wx * wy",
+    params:{freq_x:{value:15,min:2,max:60},freq_y:{value:15,min:2,max:60},speed:{value:0.05,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","wave","mesh","fabric","animated"], why:"Two crossing wave patterns creating a mesh/fabric. From t06 fabric patterns." } },
+  { cat:"PP-0B7", date:"2026-08-15", type:"gizmo", title:"Wavy Grid", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * cols; py = y * rows; dx = px + sin(py * waveFreq + t * speed) * waveAmp; dy = py + sin(px * waveFreq + t * speed) * waveAmp; gx = abs(dx - floor(dx + 0.5)); gy = abs(dy - floor(dy + 0.5)); d = min(gx, gy); smoothstep(width, 0.0, d)",
+    params:{cols:{value:8,min:2,max:30},rows:{value:8,min:2,max:30},waveFreq:{value:2,min:0.5,max:8},waveAmp:{value:0.3,min:0,max:1},width:{value:0.08,min:0.02,max:0.3},speed:{value:0.5,min:0,max:3}},
+    dna:{ author:"makers-factory", tags:["pattern","grid","wavy","sine","distortion","animated"], why:"Sine-distorted grid: regular grid lines wobble with sinusoidal displacement. GridWarp uses noise for organic warping; WavyGrid uses pure sine for rhythmic, breath-like motion. Useful for textile, water surface, and op-art patterns." } },
+  { cat:"PP-0B8", date:"2026-08-15", type:"gizmo", title:"Windmill Tile", tags:["Gizmo","Interactive"],
+    do_pixel:"gx = floor(x * cells); gy = floor(y * cells); fx = x * cells - gx - 0.5; fy = y * cells - gy - 0.5; bx = gx - floor(gx * 0.5) * 2.0; by = gy - floor(gy * 0.5) * 2.0; rot = (bx + by * 2.0) * 1.5708; rx = fx * cos(rot) - fy * sin(rot); ry = fx * sin(rot) + fy * cos(rot); 0.5 + 0.5 * sin((rx + ry) * detail * 6.28318 + t * speed)",
+    params:{cells:{value:8,min:2,max:24},detail:{value:2,min:0.5,max:10},speed:{value:0.3,min:0,max:2}},
+    dna:{ author:"makers-factory", tags:["pattern","pinwheel","windmill","tile","rotation","grid","animated"], why:"Pinwheel-rotated square tiles: each 2x2 block of cells has tiles rotated 0, 90, 180, 270 degrees based on position parity. A diagonal stripe pattern inside each tile appears to spin like windmill blades. The rotation uses position-in-block (bx + by*2) mapped to quarter-turn multiples. Mined from LYGIA space/ tile rotation and Islamic geometric pattern literature." } },
+  { cat:"PP-0B9", date:"2026-08-15", type:"gizmo", title:"Wood Ring", tags:["Gizmo","Interactive"],
+    do_pixel:"dx = x - 0.5; dy = y - 0.5; d = sqrt(dx * dx + dy * dy); n = noise2(x * scale + t * drift, y * scale); v = sin(d * freq + n * warp); 0.5 + 0.5 * v",
+    params:{scale:{value:4,min:0.5,max:20},freq:{value:20,min:2,max:60},warp:{value:2,min:0,max:10},drift:{value:0.01,min:0,max:0.2}},
+    dna:{ author:"makers-factory", tags:["noise","wood","texture","organic","radial","animated"], why:"Wood grain: sin(radial_distance + noise * warp) creates concentric growth rings distorted by noise. From Book of Shaders ch.13 — the companion to MarbleVein. Freq controls ring density, warp controls organic distortion." } },
+  { cat:"PP-0BA", date:"2026-08-15", type:"gizmo", title:"Woven Grid", tags:["Gizmo","Interactive"],
+    do_pixel:"sx = sin(y * grid_freq * 6.28318 + t * speed) * wave_amount; sy = sin(x * grid_freq * 6.28318 + t * speed * 0.8) * wave_amount; warp_x = x + sx; warp_y = y + sy; gx = 0.5 + 0.5 * sin(warp_x * grid_freq * 6.28318); gy = 0.5 + 0.5 * sin(warp_y * grid_freq * 6.28318); cell = floor(x * grid_freq) + floor(y * grid_freq); over = (cell % 2 == 0) ? gx * (1.0 - gy * 0.5) : gy * (1.0 - gx * 0.5); clamp(over, 0.0, 1.0)",
+    params:{grid_freq:{value:10,min:2,max:40},wave_amount:{value:0.1,min:0,max:0.5},speed:{value:0.03,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","weave","woven","fabric","grid","animated"], why:"Two perpendicular wave patterns with over-under weave illusion. From t06 weave/fabric patterns." } },
+  { cat:"PP-0BB", date:"2026-08-15", type:"gizmo", title:"XOR Field", tags:["Gizmo","Interactive"],
+    do_pixel:"ix = floor(x * scale + t * shear * scale); iy = floor(y * scale); v = (ix % 256 + 256) % 256; w = (iy % 256 + 256) % 256; xv = floor(v / 128) != floor(w / 128); v2 = (v % 128); w2 = (w % 128); xv2 = floor(v2 / 64) != floor(w2 / 64); v3 = (v % 64); w3 = (w % 64); xv3 = floor(v3 / 32) != floor(w3 / 32); v4 = (v % 32); w4 = (w % 32); xv4 = floor(v4 / 16) != floor(w4 / 16); v5 = (v % 16); w5 = (w % 16); xv5 = floor(v5 / 8) != floor(w5 / 8); v6 = (v % 8); w6 = (w % 8); xv6 = floor(v6 / 4) != floor(w6 / 4); v7 = (v % 4); w7 = (w % 4); xv7 = floor(v7 / 2) != floor(w7 / 2); xv8 = (v % 2) != (w % 2); result = xv * 128 + xv2 * 64 + xv3 * 32 + xv4 * 16 + xv5 * 8 + xv6 * 4 + xv7 * 2 + xv8; result / 255.0",
+    params:{scale:{value:64,min:8,max:512},shear:{value:0.01,min:0,max:0.5}},
+    dna:{ author:"makers-factory", tags:["pattern","xor","digital","arithmetic","animated"], why:"Pure arithmetic pattern from binary operations — XOR on pixel coordinates. From t06_038 XOR glyph-maker." } },
+  { cat:"PP-0BC", date:"2026-08-15", type:"gizmo", title:"Zigzag", tags:["Gizmo","Interactive"],
+    do_pixel:"px = x * cols; tri = abs(px - floor(px + 0.5)) * 2.0; sy = y * rows + tri * amplitude; d = abs(sy - floor(sy + 0.5)); smoothstep(width, 0.0, d)",
+    params:{cols:{value:4,min:1,max:16},rows:{value:8,min:2,max:30},amplitude:{value:0.5,min:0,max:2},width:{value:0.15,min:0.02,max:0.4}},
+    dna:{ author:"makers-factory", tags:["pattern","zigzag","chevron","stripe","geometric"], why:"Chevron/zigzag stripes: triangle wave offsets horizontal stripes to create V-shaped patterns. Amplitude controls the zigzag depth, rows controls stripe density. The simplest geometric pattern that creates directional visual flow without curves." } },
+  { cat:"PP-017", date:"2026-08-14", type:"text", title:"Tools as art", tags:["Log"],
+    body:["Every gizmo below is a single expression \u2014 one line of math that paints every pixel, every frame.",
+          "Drag the sliders. The formula is the artwork; the parameters are the frame."] },
+  { cat:"PP-016", date:"2026-08-14", type:"image", title:"Recursive Grid", tags:["Generative","Blender"],
+    src:"assets/pp-016.webp", alt:"Fractal grid subdivision \u2014 order at every scale, noise at every level" },
+  { cat:"PP-015", date:"2026-08-14", type:"text", title:"The Kitchen Sync", tags:["Fiction","Belt Universe"],
+    body:["Chapter 1 of the Belt novels is being serialised here. First instalment incoming.",
+          "The story started in a game. The game became a novel. The novel is becoming an animation."] },
+  { cat:"PP-014", date:"2026-08-14", type:"video", title:"Conveyor dream", tags:["Animation","Blender"],
+    src:"assets/pp-014.mp4", poster:"assets/pp-014.jpg", loop:true },
+  { cat:"PP-013", date:"2026-08-14", type:"video", title:"Stacker arm cycle", tags:["Animation","Blender"],
+    src:"assets/pp-013.mp4", poster:"assets/pp-013.jpg", loop:true },
+  { cat:"PP-012", date:"2026-08-14", type:"video", title:"Crane swing", tags:["Animation","Blender"],
+    src:"assets/pp-012.mp4", poster:"assets/pp-012.jpg", loop:true },
+  { cat:"PP-011", date:"2026-08-14", type:"video", title:"Rail loop", tags:["Animation","Blender"],
+    src:"assets/pp-011.mp4", poster:"assets/pp-011.jpg", loop:true },
+  { cat:"PP-010", date:"2026-08-14", type:"video", title:"Belt run", tags:["Animation","Blender"],
+    src:"assets/pp-010.mp4", poster:"assets/pp-010.jpg", loop:true },
+  { cat:"PP-00F", date:"2026-08-14", type:"image", title:"Hex terrain", tags:["Generative","Blender"],
+    src:"assets/pp-00f.webp", alt:"Procedural hex landscape" },
+  { cat:"PP-00E", date:"2026-08-14", type:"image", title:"Silo cluster", tags:["Generative","Blender"],
+    src:"assets/pp-00e.webp", alt:"Industrial silo array" },
+  { cat:"PP-00D", date:"2026-08-14", type:"image", title:"Pipe nest", tags:["Generative","Blender"],
+    src:"assets/pp-00d.webp", alt:"Dense pipe network" },
+  { cat:"PP-00C", date:"2026-08-14", type:"image", title:"Gantry stack", tags:["Generative","Blender"],
+    src:"assets/pp-00c.webp", alt:"Layered gantry structures" },
+  { cat:"PP-00B", date:"2026-08-14", type:"image", title:"Crate wall", tags:["Generative","Blender"],
+    src:"assets/pp-00b.webp", alt:"Grid of shipping containers" },
+  { cat:"PP-00A", date:"2026-08-14", type:"image", title:"Tower row", tags:["Generative","Blender"],
+    src:"assets/pp-00a.webp", alt:"Repeating tower modules" },
+  { cat:"PP-009", date:"2026-08-14", type:"image", title:"Panel grid", tags:["Generative","Blender"],
+    src:"assets/pp-009.webp", alt:"Modular panel wall" },
+  { cat:"PP-008", date:"2026-08-14", type:"image", title:"Frame scaffold", tags:["Generative","Blender"],
+    src:"assets/pp-008.webp", alt:"Parametric scaffolding" },
   { cat:"PP-006", date:"2026-08-14", type:"webgl", title:"Dustfield", tags:["Live","WebGL"], note:"tap to disturb" },
   { cat:"PP-005", date:"2026-08-14", type:"cracktro", title:"Loader", tags:["Demo","ASCII"], note:"tap to change the copper" },
   { cat:"PP-001", date:"2026-08-14", type:"text",  title:"What this is", tags:["Log"],
-    body:["One feed, one operator. No algorithm, no comments — just work, newest first.",
+    body:["One feed, one operator. No algorithm, no comments \u2014 just work, newest first.",
           "Everything here has a catalogue number. PP-001 is this site itself.",
           "Novels became a game. The game is becoming animations. Everything lands here first."] },
   { cat:"PP-004", date:"2026-08-14", type:"music", title:"Belt Ambient 01", tags:["Audio","Generative"],
@@ -199,6 +934,32 @@ const tagRow = p => `<div class="tags"><span class="cat">${p.cat}</span>${
 }<span class="date">${p.date}</span></div>`;
 
 const R = {
+  patch:(p)=>{
+    const id = p.cat.toLowerCase().replace("-","");
+    const sliders = p.def.params ? Object.entries(p.def.params).map(([k,v])=>
+      `<label>${k} <input type="range" min="${v.min}" max="${v.max}" step="any" value="${v.value}" data-param="${k}"><span class="val">${(+v.value).toFixed(2)}</span></label>`
+    ).join("") : "";
+    return `<article class="post">${tagRow(p)}<h2>${p.title}</h2>
+      <div class="media"><div class="frame r11" id="${id}"><canvas id="${id}c"></canvas>
+      <div class="corner">${p.cat}</div></div></div>
+      <div class="wire-row" id="${id}w"><span class="wire">${p.cat}.${p.chain.fromPort} &rarr; ${p.chain.to}.${p.chain.toPort}</span> &middot; float</div>
+      ${sliders ? `<div class="gizmo-panel" data-gizmo="${id}">${sliders}</div>` : ""}
+      <div class="dl-row">${p.downloads.map(d=>`<a href="${d.href}" download>${d.label}</a>`).join("")}</div>
+      ${p.dna && p.dna.why ? `<p>${p.dna.why}</p>` : ""}</article>`;
+  },
+
+  gizmo:(p)=>{
+    const id = p.cat.toLowerCase().replace("-","");
+    const sliders = p.params ? Object.entries(p.params).map(([k,v])=>
+      `<label>${k} <input type="range" min="${v.min}" max="${v.max}" step="any" value="${v.value}" data-param="${k}"><span class="val">${(+v.value).toFixed(2)}</span></label>`
+    ).join("") : "";
+    return `<article class="post">${tagRow(p)}<h2>${p.title}</h2>
+      <div class="media"><div class="frame r11" id="${id}"><canvas id="${id}c"></canvas>
+      <div class="corner">${p.cat}</div></div></div>
+      ${sliders ? `<div class="gizmo-panel" data-gizmo="${id}">${sliders}</div>` : ""}
+      ${p.dna && p.dna.why ? `<p>${p.dna.why}</p>` : ""}</article>`;
+  },
+
   webgl:(p)=>`<article class="post">${tagRow(p)}<h2>${p.title}</h2>
     <div class="media"><div class="frame r45" id="wgl"><canvas id="wglc"></canvas>
     <div class="corner">${p.note}</div></div></div></article>`,
@@ -444,6 +1205,250 @@ document.getElementById("yr").textContent = new Date().getFullYear();
     btn.textContent = "Play"; btn.setAttribute("aria-pressed","false");
   }
   btn.addEventListener("click", ()=> timer ? stop() : start());
+})();
+
+
+/* ============================================================
+   GIZMO PLAYER — compiles do_pixel expressions into live
+   per-pixel canvases with parameter sliders.
+   Each gizmo is its own tiny shader, running on a 2D canvas.
+   ============================================================ */
+(function(){
+  const SIZE = 256;
+  const gizmos = POSTS.filter(p => p.type === "gizmo");
+  if (!gizmos.length) return;
+
+  /* --- Simplex-style 2D noise (compact, self-contained) --- */
+  const perm = new Uint8Array(512);
+  (function(){ const p=[]; for(let i=0;i<256;i++) p[i]=i;
+    for(let i=255;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [p[i],p[j]]=[p[j],p[i]]; }
+    for(let i=0;i<512;i++) perm[i]=p[i&255];
+  })();
+  function grad2(h,x,y){ const u=h<4?x:y, v=h<4?y:x; return((h&1)?-u:u)+((h&2)?-v:v); }
+  function noise2(x,y){
+    const X=Math.floor(x)&255, Y=Math.floor(y)&255;
+    x-=Math.floor(x); y-=Math.floor(y);
+    const u=x*x*x*(x*(x*6-15)+10), v=y*y*y*(y*(y*6-15)+10);
+    const a=perm[X]+Y, b=perm[X+1]+Y;
+    return .5+.5*(
+      (1-v)*((1-u)*grad2(perm[a]&15,x,y)+u*grad2(perm[b]&15,x-1,y))
+      +v*((1-u)*grad2(perm[a+1]&15,x,y-1)+u*grad2(perm[b+1]&15,x-1,y-1))
+    );
+  }
+
+  /* --- do_pixel compiler --- */
+  const {sin,cos,sqrt,abs,atan2,PI,floor,ceil,min,max,pow,exp,log} = Math;
+  function clamp(v,lo,hi){ return v<lo?lo:v>hi?hi:v; }
+  function smoothstep(e0,e1,x){ const t=clamp((x-e0)/(e1-e0),0,1); return t*t*(3-2*t); }
+  function fmod(a,b){ return a - b * Math.floor(a/b); }
+
+  /* tan, acos, round — standard Math, just not injected yet */
+  const {tan, acos, round} = Math;
+
+  /* turbulence2 — sum of absolute-value noise octaves (fBM with abs) */
+  function turbulence2(x, y, oct) {
+    oct = oct || 4;
+    var val = 0, amp = 1, freq = 1, total = 0;
+    for(var i = 0; i < oct; i++) {
+      val += amp * abs(noise2(x * freq, y * freq) * 2 - 1);
+      total += amp;
+      amp *= 0.5;
+      freq *= 2;
+    }
+    return val / total;
+  }
+
+  /* voronoi2 — Worley cellular noise, returns distance to nearest point */
+  function voronoi2(x, y) {
+    var ix = floor(x), iy = floor(y);
+    var fx = x - ix, fy = y - iy;
+    var md = 8.0;
+    for(var j = -1; j <= 1; j++) {
+      for(var i = -1; i <= 1; i++) {
+        var ox = i + fract((sin((ix+i)*127.1 + (iy+j)*311.7) * 43758.5453)) - fx;
+        var oy = j + fract((sin((ix+i)*269.5 + (iy+j)*183.3) * 43758.5453)) - fy;
+        var d = ox*ox + oy*oy;
+        if(d < md) md = d;
+      }
+    }
+    return sqrt(md);
+  }
+  function fract(x) { return x - floor(x); }
+
+  /* cellnoise2 — integer-lattice hash noise (one random value per cell) */
+  function cellnoise2(x, y) {
+    var ix = floor(x), iy = floor(y);
+    return fract(sin(ix * 127.1 + iy * 311.7) * 43758.5453);
+  }
+
+  function compile(src, paramNames){
+    const stmts = src.split(";").map(s=>s.trim()).filter(Boolean);
+    const body = [];
+    for(let i=0;i<stmts.length-1;i++){
+      const eq = stmts[i].indexOf("=");
+      if(eq>0 && !/[=!<>]/.test(stmts[i][eq-1]) && stmts[i][eq+1]!=="="){
+        body.push("var "+stmts[i]);
+      } else {
+        body.push(stmts[i]);
+      }
+    }
+    body.push("return ("+stmts[stmts.length-1]+");");
+    const args = ["x","y","t","noise2","sin","cos","sqrt","abs","atan2","PI",
+                  "floor","ceil","min","max","pow","exp","log",
+                  "clamp","smoothstep","fmod",
+                  "tan","acos","round","turbulence2","voronoi2","cellnoise2","fract"].concat(paramNames);
+    try {
+      return new Function(...args, body.join("\n"));
+    } catch(e){
+      console.warn("Gizmo compile error:", e);
+      return function(){ return 0; };
+    }
+  }
+
+  /* --- Bootstrap each gizmo --- */
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  gizmos.forEach(p => {
+    const id = p.cat.toLowerCase().replace("-","");
+    const cv = document.getElementById(id + "c");
+    if (!cv) return;
+    cv.width = SIZE; cv.height = SIZE;
+    const ctx2 = cv.getContext("2d");
+    const img = ctx2.createImageData(SIZE, SIZE);
+    const buf = img.data;
+
+    const paramNames = p.params ? Object.keys(p.params) : [];
+    let fn;
+    try { fn = compile(p.do_pixel, paramNames); } catch(e){ return; }
+
+    /* live param values */
+    const paramValues = {};
+    if (p.params) {
+      for (const [k,v] of Object.entries(p.params)) paramValues[k] = v.value;
+    }
+
+    /* wire sliders */
+    const panel = document.querySelector(`.gizmo-panel[data-gizmo="${id}"]`);
+    if (panel) {
+      panel.querySelectorAll("input[type=range]").forEach(inp => {
+        const key = inp.dataset.param;
+        const valSpan = inp.nextElementSibling;
+        inp.addEventListener("input", () => {
+          paramValues[key] = parseFloat(inp.value);
+          if (valSpan) valSpan.textContent = parseFloat(inp.value).toFixed(2);
+        });
+      });
+    }
+
+    /* --- render loop (IntersectionObserver gated) --- */
+    let running = false, t = 0;
+    function render(){
+      if (!running) return;
+      const pArr = paramNames.map(k => paramValues[k]);
+      for(let py=0; py<SIZE; py++){
+        const ny = py / SIZE;
+        for(let px=0; px<SIZE; px++){
+          const nx = px / SIZE;
+          let v = fn(nx, ny, t, noise2,
+            sin, cos, sqrt, abs, atan2, PI,
+            floor, ceil, min, max, pow, exp, log,
+            clamp, smoothstep, fmod,
+            tan, acos, round, turbulence2, voronoi2, cellnoise2, fract,
+            ...pArr);
+          v = clamp(v, 0, 1);
+          const c = (v * 255) | 0;
+          const i = (py * SIZE + px) * 4;
+          buf[i] = c; buf[i+1] = c; buf[i+2] = c; buf[i+3] = 255;
+        }
+      }
+      ctx2.putImageData(img, 0, 0);
+      if (!reduced) t += 1;
+      requestAnimationFrame(render);
+    }
+
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting && !running) { running = true; render(); }
+        else if (!e.isIntersecting) { running = false; }
+      });
+    }, { threshold: 0.05 });
+    obs.observe(cv.parentElement);
+  });
+})();
+
+/* ============================================================
+   PATCH — the reader wiring one gizmo into another.
+   Each patch post carries a source gizmo def and a chain spec;
+   reader.js resolves the wire by type and ticks the graph.
+   ============================================================ */
+(function(){
+  if (typeof Reader === "undefined") return;
+  const SIZE = 256;
+  const patches = POSTS.filter(p => p.type === "patch");
+  if (!patches.length) return;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  patches.forEach(p => {
+    const id = p.cat.toLowerCase().replace("-","");
+    const cv = document.getElementById(id + "c");
+    const wireRow = document.getElementById(id + "w");
+    if (!cv) return;
+    cv.width = SIZE; cv.height = SIZE;
+    const ctx2 = cv.getContext("2d");
+    const img = ctx2.createImageData(SIZE, SIZE);
+    const buf = img.data;
+
+    const target = POSTS.find(q => q.cat === p.chain.to);
+    if (!target) { if (wireRow) wireRow.textContent = "no match: " + p.chain.to + " not in catalogue"; return; }
+
+    const reader = Reader.createReader();
+    try {
+      reader.instantiate("src", p.def);
+      reader.fromPost("dst", target);
+      reader.connect("src", p.chain.fromPort, "dst", p.chain.toPort);
+    } catch(e) {
+      if (wireRow) wireRow.textContent = String(e.message || e);
+      return;
+    }
+
+    /* sliders steer the source gizmo through the reader */
+    const panel = document.querySelector(`.gizmo-panel[data-gizmo="${id}"]`);
+    if (panel) {
+      panel.querySelectorAll("input[type=range]").forEach(inp => {
+        inp.addEventListener("input", () => {
+          reader.setParam("src", inp.dataset.param, parseFloat(inp.value));
+          const valSpan = inp.nextElementSibling;
+          if (valSpan) valSpan.textContent = parseFloat(inp.value).toFixed(2);
+        });
+      });
+    }
+
+    let running = false, t = 0;
+    function render(){
+      if (!running) return;
+      const field = reader.pull("dst", t);
+      for(let py=0; py<SIZE; py++){
+        const ny = py / SIZE;
+        for(let px=0; px<SIZE; px++){
+          let v = field(px / SIZE, ny);
+          v = v<0?0:v>1?1:v;
+          const c = (v * 255) | 0;
+          const i = (py * SIZE + px) * 4;
+          buf[i] = c; buf[i+1] = c; buf[i+2] = c; buf[i+3] = 255;
+        }
+      }
+      ctx2.putImageData(img, 0, 0);
+      if (!reduced) t += 1;
+      requestAnimationFrame(render);
+    }
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting && !running) { running = true; render(); }
+        else if (!e.isIntersecting) { running = false; }
+      });
+    }, { threshold: 0.05 });
+    obs.observe(cv.parentElement);
+  });
 })();
 
 /* Email — front-end only. Wire to Buttondown / Formspree later. */
