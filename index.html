@@ -223,8 +223,36 @@ footer{
 .triage button[type=submit]{ margin-top:10px; font-family:var(--font-mono); font-size:11px;
   text-transform:uppercase; letter-spacing:.06em; padding:6px 12px;
   border:1px solid var(--ink); background:var(--ink); color:var(--ground); cursor:pointer; }
+.because-row{ display:flex; gap:8px; margin-top:5px; }
+.because-row input{ margin-top:0 !important; }
+.mic{ font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.06em;
+  padding:6px 10px; border:1px solid var(--line); background:none; color:var(--grey);
+  cursor:pointer; white-space:nowrap; }
+.mic.live{ border-color:var(--ink); color:var(--ink); animation:pulse 1.2s ease-in-out infinite; }
 .triage .tnote{ font-family:var(--font-mono); font-size:10px; color:var(--grey);
   margin-top:8px; letter-spacing:.04em; max-width:none; }
+
+/* ---- prose stage (the text is the output) ---- */
+.prose-stage{ position:absolute; inset:0; padding:20px 22px; overflow-y:auto;
+  font-family:var(--font-mono); font-size:12.5px; line-height:1.9; color:#8a8a86;
+  scrollbar-width:none; }
+.prose-stage::-webkit-scrollbar{ display:none; }
+.prose-stage p{ margin:0 0 16px; color:inherit; font-size:inherit; line-height:inherit; max-width:none; }
+.prose-stage .w{ transition:color .12s ease; }
+.prose-stage .w.read{ color:#4c4c49; }
+.prose-stage .w.stop{ color:#c9915d; }
+.prose-stage .w.cur{ color:#ffffff; background:rgba(255,255,255,.09); border-radius:2px; }
+.prose-stage.rsvp{ display:flex; align-items:center; justify-content:center;
+  overflow:hidden; text-align:center; padding:0 14px; }
+.prose-stage.rsvp .rsvp-word{ font-family:var(--font-display); font-weight:800;
+  font-size:clamp(24px,7vw,40px); letter-spacing:-.02em; color:#fff; overflow-wrap:anywhere; }
+.prose-controls{ padding:12px 0 0; display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
+.prose-controls button{ font-family:var(--font-mono); font-size:11px; text-transform:uppercase;
+  letter-spacing:.06em; padding:5px 14px; border:1px solid var(--line); background:none;
+  color:var(--ink); cursor:pointer; }
+.prose-controls button.on{ border-color:var(--ink); background:var(--ink); color:var(--ground); }
+.pp-counter{ font-family:var(--font-mono); font-size:11px; color:var(--grey);
+  margin-left:auto; letter-spacing:.04em; font-variant-numeric:tabular-nums; }
 
 /* ---- studio (operator only) ---- */
 .studio-box{ width:var(--col); padding:14px 20px 10px; border-top:1px solid var(--line); }
@@ -289,7 +317,7 @@ const FORM_ENDPOINT = ""; // e.g. https://formspree.io/f/XXXXXXXX — one list, 
 const REPO = "https://github.com/Robboburgers/programmable-pixels"; // every lane links back to the machine
 
 const POSTS = [
-  {"cat":"PP-000A7","date":"2026-08-15","type":"patch","title":"Prose","tags":["Gizmo","Patch","Interactive"],"def":{"name":"Prose","class":"Transform","ports":{"in":[{"name":"text","type":"words"},{"name":"loop","type":"trigger"}],"out":[{"name":"length","type":"float"},{"name":"words","type":"float"},{"name":"sentences","type":"float"},{"name":"paragraphs","type":"float"},{"name":"density","type":"field"},{"name":"progress","type":"float"},{"name":"char","type":"float"},{"name":"letter","type":"trigger"},{"name":"vowel","type":"trigger"},{"name":"space","type":"trigger"},{"name":"sentence","type":"trigger"},{"name":"paragraph","type":"trigger"},{"name":"syllable","type":"trigger"},{"name":"wordlen","type":"float"},{"name":"sentlen","type":"float"},{"name":"rhythm","type":"float"},{"name":"current","type":"words"},{"name":"line","type":"words"}]},"params":{"rate":{"value":12,"min":1,"max":60,"step":1}},"body":{"code":"function evalProse(params, inputs, t) {\n  /* why: it gives no meaning, it just extracts working values you can\n     drive other stuff with, from whatever the characters are. */\n  var text = String(inputs.text || \"\");\n  var rate = params.rate; /* characters per second; the reader ticks at 60/s */\n  var n = text.length;\n  var Z = { length: 0, words: 0, sentences: 0, paragraphs: 0,\n    density: function () { return 0; },\n    progress: 0, char: 0, letter: 0, vowel: 0, space: 0, sentence: 0,\n    paragraph: 0, syllable: 0, wordlen: 0, sentlen: 0, rhythm: 0,\n    current: \"\", line: \"\" };\n  if (!n) return Z;\n\n  var isSpace = function (c) { return c === \" \" || c === \"\\t\" || c === \"\\n\" || c === \"\\r\"; };\n  var isVowel = function (c) { return \"aeiouAEIOU\".indexOf(c) >= 0; };\n  var isLetter = function (c) { return c.toLowerCase() !== c.toUpperCase(); };\n  var isStop = function (c) { return c === \".\" || c === \"!\" || c === \"?\"; };\n\n  /* --- the whole (constant over t) --- */\n  var wordCount = 0, sentCount = 0, paraCount = 1, inWord = false;\n  for (var i = 0; i < n; i++) {\n    var c = text[i];\n    if (!isSpace(c) && !inWord) { inWord = true; wordCount++; }\n    if (isSpace(c)) inWord = false;\n    if (isStop(c) && !isStop(text[i + 1] || \"\")) sentCount++;\n    if (c === \"\\n\" && text[i + 1] === \"\\n\") paraCount++;\n  }\n  var density = function (x) {\n    var cpos = Math.floor(Math.max(0, Math.min(0.9999, x)) * n);\n    var w = Math.max(8, Math.floor(n / 64));\n    var a = Math.max(0, cpos - w), b = Math.min(n, cpos + w), ink = 0;\n    for (var j = a; j < b; j++) if (!isSpace(text[j])) ink++;\n    return b > a ? ink / (b - a) : 0;\n  };\n\n  /* --- the playhead (per tick; loops at the end) --- */\n  var pos = Math.floor(t * rate / 60) % n;\n  var prev = t > 0 ? Math.floor((t - 1) * rate / 60) % n : -1;\n  var ch = text[pos];\n\n  /* a trigger fires if the boundary was crossed since the last tick */\n  var crossed = function (test) {\n    if (prev === pos || prev < 0) return prev < 0 && test(text[pos], pos) ? 1 : 0;\n    var k = (prev + 1) % n;\n    while (true) {\n      if (test(text[k], k)) return 1;\n      if (k === pos) return 0;\n      k = (k + 1) % n;\n    }\n  };\n  var letter = crossed(function (c) { return isLetter(c); });\n  var vowel = crossed(function (c) { return isVowel(c); });\n  var space = crossed(function (c) { return isSpace(c); });\n  var sentence = crossed(function (c) { return isStop(c); });\n  var paragraph = crossed(function (c, k) { return c === \"\\n\" && text[k + 1] === \"\\n\"; });\n  var syllable = crossed(function (c, k) {\n    /* vowel-group boundary, heuristic: a vowel whose predecessor is not */\n    return isVowel(c) && !isVowel(text[k - 1] || \" \");\n  });\n\n  /* current word and its length */\n  var ws = pos; while (ws > 0 && !isSpace(text[ws - 1])) ws--;\n  var we = pos; while (we < n && !isSpace(text[we])) we++;\n  var current = text.slice(ws, we);\n\n  /* current sentence and its length in words */\n  var ss = pos; while (ss > 0 && !isStop(text[ss - 1])) ss--;\n  var se = pos; while (se < n && !isStop(text[se])) se++;\n  var line = text.slice(ss, Math.min(se + 1, n)).trim();\n  var sentlen = line.split(/\\s+/).filter(function (s) { return s; }).length;\n\n  /* rhythm: syllables per second over the last ~2s, 0..1 (8 syl/s = 1) */\n  var back = Math.min(pos, Math.floor(2 * rate));\n  var syl = 0;\n  for (var m = pos - back; m <= pos; m++) {\n    if (isVowel(text[m]) && !isVowel(text[m - 1] || \" \")) syl++;\n  }\n  var rhythm = Math.min(1, (syl / 2) / 8);\n\n  return {\n    length: n, words: wordCount, sentences: sentCount, paragraphs: paraCount,\n    density: density,\n    progress: pos / n, char: text.charCodeAt(pos),\n    letter: letter, vowel: vowel, space: space, sentence: sentence,\n    paragraph: paragraph, syllable: syllable,\n    wordlen: current.length, sentlen: sentlen, rhythm: rhythm,\n    current: current, line: line\n  };\n}"}},"inputs":{"text":"The pills were on the bedside table where Clarence had put them. Two generics, one glass of water, positioned at the exact angle Brad's right hand would reach without opening his eyes. Clarence had been doing this for seventeen years, and the glass had moved three centimetres to the left over that time, tracking the slow deterioration of Brad's shoulder.\n\nBrad swallowed them dry, ignoring the water. He'd been ignoring the water for seventeen years too. Clarence logged it the way he logged everything — silently, completely, with an opinion he expressed through the precise temperature of the morning coffee.\n\n\"Three minutes,\" Clarence said. He stood in the kitchen alcove — a domestic robot, third-generation, his white casing gone yellow and layered with stickers Brad had put on him over the years."},"chain":{"fromPort":"rhythm","to":"PP-00001","toPort":"warp"},"downloads":[{"label":"prose.gizmo.json","href":"gizmos/prose/prose.gizmo.json"},{"label":"folder (zip)","href":"gizmos/prose/prose.zip"}],"dna":{"author":"robbo","tags":["transform","words","playhead","signals"],"why":"Any text in, signals out. Prose walks whatever you write like a playhead — boundaries, rhythm, density — and gives no meaning, just working values you can drive other stuff with. Here it walks the opening of The Clarence Problem — chapter one, The Kitchen Sync, from the Brad Powers series — at twelve characters a second, and its rhythm port drives Domain Warp's warp: Clarence's morning routine breathes the marble. The first words on the wire."}},
+  {"cat":"PP-000A7","date":"2026-08-15","type":"patch","title":"Prose","display":"prose","tags":["Gizmo","Patch","Interactive"],"def":{"name":"Prose","class":"Transform","ports":{"in":[{"name":"text","type":"words"},{"name":"loop","type":"trigger"}],"out":[{"name":"length","type":"float"},{"name":"words","type":"float"},{"name":"sentences","type":"float"},{"name":"paragraphs","type":"float"},{"name":"density","type":"field"},{"name":"progress","type":"float"},{"name":"char","type":"float"},{"name":"letter","type":"trigger"},{"name":"vowel","type":"trigger"},{"name":"space","type":"trigger"},{"name":"sentence","type":"trigger"},{"name":"paragraph","type":"trigger"},{"name":"syllable","type":"trigger"},{"name":"wordlen","type":"float"},{"name":"sentlen","type":"float"},{"name":"rhythm","type":"float"},{"name":"current","type":"words"},{"name":"line","type":"words"}]},"params":{"rate":{"value":12,"min":1,"max":60,"step":1}},"body":{"code":"function evalProse(params, inputs, t) {\n  /* why: it gives no meaning, it just extracts working values you can\n     drive other stuff with, from whatever the characters are. */\n  var text = String(inputs.text || \"\");\n  var rate = params.rate; /* characters per second; the reader ticks at 60/s */\n  var n = text.length;\n  var Z = { length: 0, words: 0, sentences: 0, paragraphs: 0,\n    density: function () { return 0; },\n    progress: 0, char: 0, letter: 0, vowel: 0, space: 0, sentence: 0,\n    paragraph: 0, syllable: 0, wordlen: 0, sentlen: 0, rhythm: 0,\n    current: \"\", line: \"\" };\n  if (!n) return Z;\n\n  var isSpace = function (c) { return c === \" \" || c === \"\\t\" || c === \"\\n\" || c === \"\\r\"; };\n  var isVowel = function (c) { return \"aeiouAEIOU\".indexOf(c) >= 0; };\n  var isLetter = function (c) { return c.toLowerCase() !== c.toUpperCase(); };\n  var isStop = function (c) { return c === \".\" || c === \"!\" || c === \"?\"; };\n\n  /* --- the whole (constant over t) --- */\n  var wordCount = 0, sentCount = 0, paraCount = 1, inWord = false;\n  for (var i = 0; i < n; i++) {\n    var c = text[i];\n    if (!isSpace(c) && !inWord) { inWord = true; wordCount++; }\n    if (isSpace(c)) inWord = false;\n    if (isStop(c) && !isStop(text[i + 1] || \"\")) sentCount++;\n    if (c === \"\\n\" && text[i + 1] === \"\\n\") paraCount++;\n  }\n  var density = function (x) {\n    var cpos = Math.floor(Math.max(0, Math.min(0.9999, x)) * n);\n    var w = Math.max(8, Math.floor(n / 64));\n    var a = Math.max(0, cpos - w), b = Math.min(n, cpos + w), ink = 0;\n    for (var j = a; j < b; j++) if (!isSpace(text[j])) ink++;\n    return b > a ? ink / (b - a) : 0;\n  };\n\n  /* --- the playhead (per tick; loops at the end) --- */\n  var pos = Math.floor(t * rate / 60) % n;\n  var prev = t > 0 ? Math.floor((t - 1) * rate / 60) % n : -1;\n  var ch = text[pos];\n\n  /* a trigger fires if the boundary was crossed since the last tick */\n  var crossed = function (test) {\n    if (prev === pos || prev < 0) return prev < 0 && test(text[pos], pos) ? 1 : 0;\n    var k = (prev + 1) % n;\n    while (true) {\n      if (test(text[k], k)) return 1;\n      if (k === pos) return 0;\n      k = (k + 1) % n;\n    }\n  };\n  var letter = crossed(function (c) { return isLetter(c); });\n  var vowel = crossed(function (c) { return isVowel(c); });\n  var space = crossed(function (c) { return isSpace(c); });\n  var sentence = crossed(function (c) { return isStop(c); });\n  var paragraph = crossed(function (c, k) { return c === \"\\n\" && text[k + 1] === \"\\n\"; });\n  var syllable = crossed(function (c, k) {\n    /* vowel-group boundary, heuristic: a vowel whose predecessor is not */\n    return isVowel(c) && !isVowel(text[k - 1] || \" \");\n  });\n\n  /* current word and its length */\n  var ws = pos; while (ws > 0 && !isSpace(text[ws - 1])) ws--;\n  var we = pos; while (we < n && !isSpace(text[we])) we++;\n  var current = text.slice(ws, we);\n\n  /* current sentence and its length in words */\n  var ss = pos; while (ss > 0 && !isStop(text[ss - 1])) ss--;\n  var se = pos; while (se < n && !isStop(text[se])) se++;\n  var line = text.slice(ss, Math.min(se + 1, n)).trim();\n  var sentlen = line.split(/\\s+/).filter(function (s) { return s; }).length;\n\n  /* rhythm: syllables per second over the last ~2s, 0..1 (8 syl/s = 1) */\n  var back = Math.min(pos, Math.floor(2 * rate));\n  var syl = 0;\n  for (var m = pos - back; m <= pos; m++) {\n    if (isVowel(text[m]) && !isVowel(text[m - 1] || \" \")) syl++;\n  }\n  var rhythm = Math.min(1, (syl / 2) / 8);\n\n  return {\n    length: n, words: wordCount, sentences: sentCount, paragraphs: paraCount,\n    density: density,\n    progress: pos / n, char: text.charCodeAt(pos),\n    letter: letter, vowel: vowel, space: space, sentence: sentence,\n    paragraph: paragraph, syllable: syllable,\n    wordlen: current.length, sentlen: sentlen, rhythm: rhythm,\n    current: current, line: line\n  };\n}"}},"inputs":{"text":"The pills were on the bedside table where Clarence had put them. Two generics, one glass of water, positioned at the exact angle Brad's right hand would reach without opening his eyes. Clarence had been doing this for seventeen years, and the glass had moved three centimetres to the left over that time, tracking the slow deterioration of Brad's shoulder.\n\nBrad swallowed them dry, ignoring the water. He'd been ignoring the water for seventeen years too. Clarence logged it the way he logged everything — silently, completely, with an opinion he expressed through the precise temperature of the morning coffee.\n\n\"Three minutes,\" Clarence said. He stood in the kitchen alcove — a domestic robot, third-generation, his white casing gone yellow and layered with stickers Brad had put on him over the years."},"chain":{"fromPort":"rhythm","to":"PP-00001","toPort":"warp"},"downloads":[{"label":"prose.gizmo.json","href":"gizmos/prose/prose.gizmo.json"},{"label":"folder (zip)","href":"gizmos/prose/prose.zip"}],"dna":{"author":"robbo","tags":["transform","words","playhead","signals"],"why":"Any text in, signals out. Prose walks whatever you write like a playhead — boundaries, rhythm, density — and gives no meaning, just working values you can drive other stuff with. Here it walks the opening of The Clarence Problem — chapter one, The Kitchen Sync, from the Brad Powers series — at twelve characters a second, and its rhythm port drives Domain Warp's warp: Clarence's morning routine breathes the marble. The first words on the wire."}},
   { cat:"PP-000A6", date:"2026-08-15", type:"patch", title:"Pulse", tags:["Gizmo","Patch","Interactive"],
     def:{ name:"Pulse", class:"Generator",
       ports:{ in:[], out:[{name:"wave",type:"float"}] },
@@ -972,14 +1000,20 @@ const R = {
     const sliders = p.def.params ? Object.entries(p.def.params).map(([k,v])=>
       `<label>${k} <input type="range" min="${v.min}" max="${v.max}" step="any" value="${v.value}" data-param="${k}"><span class="val">${(+v.value).toFixed(2)}</span></label>`
     ).join("") : "";
+    const stage = p.display === "prose"
+      ? `<div class="frame r11" id="${id}"><div class="prose-stage" id="${id}s"></div><div class="corner">${p.cat}</div></div>`
+      : `<div class="frame r11" id="${id}"><canvas id="${id}c"></canvas><div class="corner">${p.cat}</div></div>`;
+    const controls = p.display === "prose"
+      ? `<div class="prose-controls" data-cat="${p.cat}"><button type="button" class="pp-play">Play</button><button type="button" class="pp-mode">Speed read</button><span class="pp-counter"></span></div>`
+      : "";
     return `<article class="post">${tagRow(p)}<h2>${p.title}</h2>
-      <div class="media"><div class="frame r11" id="${id}"><canvas id="${id}c"></canvas>
-      <div class="corner">${p.cat}</div></div></div>
+      <div class="media">${stage}</div>
+      ${controls}
       <div class="wire-row" id="${id}w"><span class="wire">${p.cat}.${p.chain.fromPort} &rarr; ${p.chain.to}.${p.chain.toPort}</span> &middot; float</div>
       ${sliders ? `<div class="gizmo-panel" data-gizmo="${id}">${sliders}</div>` : ""}
       <div class="dl-row">${p.downloads.map(d=>`<a href="${d.href}" download>${d.label}</a>`).join("")}<a class="src-link" href="${REPO}" target="_blank" rel="noopener">source</a></div>
       ${p.dna && p.dna.why ? `<p>${p.dna.why}</p>` : ""}
-      <div class="lane-links"><div class="triage-line" data-cat="${p.cat}">tell it what it feels like</div><a class="src-link" href="${REPO}" target="_blank" rel="noopener">source</a></div></article>`;
+      <div class="lane-links"><div class="triage-line" data-cat="${p.cat}">Thoughts?</div><a class="src-link" href="${REPO}" target="_blank" rel="noopener">source</a></div></article>`;
   },
 
   gizmo:(p)=>{
@@ -992,7 +1026,7 @@ const R = {
       <div class="corner">${p.cat}</div></div></div>
       ${sliders ? `<div class="gizmo-panel" data-gizmo="${id}">${sliders}</div>` : ""}
       ${p.dna && p.dna.why ? `<p>${p.dna.why}</p>` : ""}
-      <div class="lane-links"><div class="triage-line" data-cat="${p.cat}">tell it what it feels like</div><a class="src-link" href="${REPO}" target="_blank" rel="noopener">source</a></div></article>`;
+      <div class="lane-links"><div class="triage-line" data-cat="${p.cat}">Thoughts?</div><a class="src-link" href="${REPO}" target="_blank" rel="noopener">source</a></div></article>`;
   },
 
   webgl:(p)=>`<article class="post">${tagRow(p)}<h2>${p.title}</h2>
@@ -1110,6 +1144,7 @@ document.getElementById("yr").textContent = new Date().getFullYear();
 
   patches.forEach(p => {
     const id = p.cat.toLowerCase().replace("-","");
+    if (p.display === "prose") { proseLane(p, id); return; }
     const cv = document.getElementById(id + "c");
     const wireRow = document.getElementById(id + "w");
     if (!cv) return;
@@ -1170,6 +1205,93 @@ document.getElementById("yr").textContent = new Date().getFullYear();
     }, { threshold: 0.05 });
     obs.observe(cv.parentElement);
   });
+
+  /* --- the prose lane: the text is the output. The display is driven
+     by the gizmo's own ports (progress, current, rhythm) through the
+     reader. Play steps the counter; speed read centres each word. --- */
+  function proseLane(p, id) {
+    const stage = document.getElementById(id + "s");
+    if (!stage) return;
+    const text = (p.inputs && p.inputs.text) || "";
+    const rd = Reader.createReader();
+    try {
+      rd.instantiate("src", p.def);
+      for (const k in p.inputs) rd.setInput("src", k, p.inputs[k]);
+    } catch(e) { stage.textContent = String(e.message || e); return; }
+
+    /* reveal: words as spans, paragraphs kept, sentence-enders accented */
+    const tokens = [];
+    for (const m of text.matchAll(/\S+/g)) tokens.push({ word: m[0], start: m.index });
+    let htmlOut = "<p>";
+    tokens.forEach((tk, i) => {
+      if (i > 0) {
+        const gap = text.slice(tokens[i-1].start + tokens[i-1].word.length, tk.start);
+        htmlOut += /\n\s*\n/.test(gap) ? "</p><p>" : " ";
+      }
+      const stop = /[.!?]["')\u201d]*$/.test(tk.word) ? " stop" : "";
+      htmlOut += `<span class="w${stop}" data-i="${i}">${tk.word.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</span>`;
+    });
+    stage.innerHTML = htmlOut + "</p>";
+    const spans = stage.querySelectorAll(".w");
+
+    const box = document.querySelector(`.prose-controls[data-cat="${p.cat}"]`);
+    const playBtn = box && box.querySelector(".pp-play");
+    const modeBtn = box && box.querySelector(".pp-mode");
+    const counter = box && box.querySelector(".pp-counter");
+
+    /* sliders steer the gizmo (rate = characters per second) */
+    const panel = document.querySelector(`.gizmo-panel[data-gizmo="${id}"]`);
+    if (panel) panel.querySelectorAll("input[type=range]").forEach(inp => {
+      inp.addEventListener("input", () => {
+        rd.setParam("src", inp.dataset.param, parseFloat(inp.value));
+        const s = inp.nextElementSibling; if (s) s.textContent = parseFloat(inp.value).toFixed(2);
+      });
+    });
+
+    let t = 0, playing = false, rsvp = false, lastWord = -1;
+    if (playBtn) playBtn.addEventListener("click", () => {
+      playing = !playing;
+      playBtn.textContent = playing ? "Pause" : "Play";
+      playBtn.classList.toggle("on", playing);
+    });
+    if (modeBtn) modeBtn.addEventListener("click", () => {
+      rsvp = !rsvp;
+      modeBtn.classList.toggle("on", rsvp);
+      stage.classList.toggle("rsvp", rsvp);
+      if (rsvp) stage.innerHTML = `<div class="rsvp-word"></div>`;
+      else { stage.innerHTML = htmlOut + "</p>"; lastWord = -1; }
+    });
+
+    function wordAt(pos) {
+      let w = 0;
+      for (let i = 0; i < tokens.length; i++) { if (tokens[i].start <= pos) w = i; else break; }
+      return w;
+    }
+
+    function render() {
+      const o = rd.pull("src", t);
+      const pos = Math.min(text.length - 1, Math.round(o.progress * text.length));
+      const wi = wordAt(pos);
+      if (rsvp) {
+        const el = stage.querySelector(".rsvp-word");
+        if (el && el.textContent !== tokens[wi].word) el.textContent = tokens[wi].word;
+      } else if (wi !== lastWord) {
+        const all = stage.querySelectorAll(".w");
+        all.forEach((s, i) => {
+          s.classList.toggle("cur", i === wi);
+          s.classList.toggle("read", i < wi);
+        });
+        const cur = all[wi];
+        if (cur && playing && cur.scrollIntoView) cur.scrollIntoView({ block: "center", behavior: "smooth" });
+        lastWord = wi;
+      }
+      if (counter) counter.textContent =
+        `word ${wi + 1} / ${tokens.length} \u00b7 rhythm ${o.rhythm.toFixed(2)}`;
+      if (playing) t += 1;
+      requestAnimationFrame(render);
+    }
+    render();
+  }
 })();
 
 /* ============================================================
@@ -1282,7 +1404,7 @@ document.getElementById("yr").textContent = new Date().getFullYear();
         <input type="text" name="noun_new" maxlength="24" placeholder="a noun of your own">
         <p class="tq">kill — optional, one</p>${chiprow("kills", v.kills, 1)}
         <p class="tq">because — your own words</p>
-        <input type="text" name="because" maxlength="140" required placeholder="one line, 140 characters">
+        <div class="because-row"><input type="text" name="because" maxlength="140" required placeholder="one line, 140 characters — type it or say it"><button type="button" class="mic" title="dictate">&#9679; rec</button></div>
         <input type="email" name="email" required placeholder="you@somewhere.net" value="${getEmail()}" aria-label="Email address">
         <button type="submit">Send</button>
         <p class="tnote">Goes to the operator's triage and the same list as downloads. Nothing else. Nothing appears here automatically.</p>`;
@@ -1294,6 +1416,36 @@ document.getElementById("yr").textContent = new Date().getFullYear();
           if (row.querySelectorAll(".chip.on").length < +row.dataset.max) e.target.classList.add("on");
         });
       });
+
+      /* voice dictation into the because field — browser speech
+         recognition where available (a Whisper gizmo can replace
+         this later; same field, same record) */
+      const micBtn = form.querySelector(".mic");
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { if (micBtn) micBtn.remove(); }
+      else if (micBtn) {
+        let rec = null;
+        micBtn.addEventListener("click", () => {
+          if (rec) { rec.stop(); return; }
+          rec = new SR();
+          rec.lang = "en-GB";
+          rec.interimResults = false;
+          micBtn.classList.add("live");
+          micBtn.innerHTML = "&#9632; stop";
+          rec.onresult = (ev) => {
+            const said = Array.from(ev.results).map(r => r[0].transcript).join(" ").trim();
+            const inp = form.because;
+            inp.value = (inp.value ? inp.value + " " : "") + said;
+            inp.value = inp.value.slice(0, 140);
+          };
+          rec.onend = () => {
+            rec = null;
+            micBtn.classList.remove("live");
+            micBtn.innerHTML = "&#9679; rec";
+          };
+          rec.start();
+        });
+      }
       form.addEventListener("submit", e => {
         e.preventDefault();
         const pick = name => [...form.querySelectorAll(`.chips[data-name="${name}"] .chip.on`)].map(b => b.textContent);
