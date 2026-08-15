@@ -12,9 +12,13 @@ catalogue piece, Factory Records style. Read this before touching anything.
 
 ## Catalogue rules (IMMUTABLE)
 
-- Every entry gets the next hex catalogue number: PP-001, PP-002 ... PP-00A ... PP-0FF.
+- Every entry gets the next hex catalogue number, five hex digits:
+  PP-00001, PP-00002 ... PP-000A6 ... (1,048,576 labels).
+- Catalogue v0 (PP-001..PP-017, three digits) is closed — see retired.md.
+  The 2026-08-15 renumbering into the five-digit series was the one and
+  only reset; next label to assign is PP-000A7.
 - Numbers are NEVER reused, renumbered, or reordered — even if a piece is removed.
-- Everything gets a number: works, tools, the site itself (PP-001), the mailing list (PP-002).
+- Everything gets a number: works, tools, the reader, the site itself.
 - `date` = the day the piece entered the catalogue (ISO, YYYY-MM-DD). Also immutable.
 - Display order in the feed is newest-first and is independent of catalogue order.
 - When adding a post, check the highest existing number in POSTS and increment in hex.
