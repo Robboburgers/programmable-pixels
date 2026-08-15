@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GIZMO.md — Programmable Pixels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#F6F6F4; --ink:#111111; --grey:#8C8C88; --line:#E3E3DF;
+  --font-display:"Univers Next","Univers LT Std","Univers","Helvetica Neue",Helvetica,"Inter",Arial,sans-serif;
+  --font-body:"Helvetica Neue",Helvetica,"Inter",Arial,sans-serif;
+  --font-mono:"IBM Plex Mono",monospace;
+  --col:min(680px,100%);
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html{ background:var(--ground); }
+body{ font-family:var(--font-body); color:var(--ink); background:var(--ground);
+  min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  -webkit-font-smoothing:antialiased; }
+header{ width:var(--col); padding:22px 20px; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+.wordmark{ font-family:var(--font-display); font-size:clamp(20px,5.6vw,28px); font-weight:800; letter-spacing:-.025em; text-transform:uppercase; }
+.wordmark a{ color:var(--ink); text-decoration:none; }
+.tabs{ display:flex; gap:16px; }
+.tabs a{ font-family:var(--font-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink); text-decoration:none; border-bottom:1px solid transparent; padding-bottom:2px; }
+.tabs a:hover,.tabs a.on{ border-bottom-color:var(--ink); }
+main{ width:var(--col); padding:10px 20px 60px; }
+main h1{ font-family:var(--font-display); font-weight:800; letter-spacing:-.02em; text-transform:uppercase;
+  font-size:clamp(22px,5vw,30px); margin:18px 0 14px; }
+main h2{ font-family:var(--font-display); font-weight:800; letter-spacing:-.01em;
+  font-size:clamp(16px,3.6vw,20px); margin:30px 0 10px; }
+main h3{ font-family:var(--font-mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; margin:22px 0 8px; }
+main p{ font-size:15px; line-height:1.65; margin:0 0 14px; }
+main em{ font-style:italic; }
+main ul{ margin:0 0 14px 20px; }
+main li{ font-size:15px; line-height:1.65; margin-bottom:4px; }
+main blockquote{ border-left:1px solid var(--ink); padding:2px 0 2px 18px; margin:0 0 14px; }
+main blockquote p{ margin-bottom:8px; }
+main blockquote p:last-child{ margin-bottom:0; }
+main code{ font-family:var(--font-mono); font-size:12px; }
+main pre{ border:1px solid var(--line); padding:12px 14px; overflow-x:auto; margin:0 0 14px; }
+main pre code{ font-size:12px; line-height:1.55; }
+main hr{ border:0; border-top:1px solid var(--line); margin:26px 0; }
+main .cite{ font-family:var(--font-mono); font-size:11px; color:var(--grey); letter-spacing:.02em; margin:-6px 0 14px; }
+main .cite code{ font-size:11px; color:var(--grey); }
+footer{ width:var(--col); padding:20px; margin-top:auto; border-top:1px solid var(--line);
+  font-family:var(--font-mono); font-size:11px; color:var(--grey); letter-spacing:.04em; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark"><a href="index.html">Programmable Pixels</a></div>
+  <nav class="tabs">
+    <a href="manifesto.html">Manifesto</a>
+    <a href="law.html" class="on">GIZMO.md</a>
+  </nav>
+</header>
+
+<main>
+<h1>GIZMO.md — what a gizmo is</h1>
+<p>Version 1. 15 August 2026. This file travels with every gizmo. If it is in your folder, these are the rules the gizmo was made under.</p>
+<p>Everything here is free: the gizmos, this map, and the reader. Clone it, build, share. Free is not a kindness, it is what makes the swap work.</p>
+<h2>The definition</h2>
+<p>A gizmo is a node: a piece of mathematics with typed ports, which computes and returns a value. The test is whether another gizmo can be plugged into it and it can be plugged into another gizmo. If not, it is a screensaver, not a gizmo.</p>
+<p>A gizmo is sealed behaviour with DNA. The behaviour is the maths. The DNA is where it came from, why it exists, and who it has met.</p>
+<h2>Liquid and ice</h2>
+<p>Liquid is the maths: the gizmo file, its parameters, the patch it sits in. Ice is baked pixels: renders, frames, sound files. Freeze turns liquid into ice. Melt turns ice back into signals that can drive other gizmos.</p>
+<p>Repos, downloads and readers carry liquid. Ice stays local, or is sold. A published catalogue piece is ice; the gizmo behind it is liquid and free.</p>
+<h2>The stud</h2>
+<p>Every gizmo honours one contract, the stud: it declares typed inputs, typed outputs, and can be ticked. Standardise how things connect and what things are goes feral. The wire spec outranks the stud if they ever disagree.</p>
+<h2>The wire</h2>
+<p>Every parcel on the wire carries what it is and the thing itself: <code>{type, value}</code>. Two ports connect when their types match. Mismatch does not wire. Nothing else is checked.</p>
+<p>Port types (v1): float, vec2, field, particles, visual, words, trigger, image. New types are a named event: reuse before you invent, and a new type is proposed to the reader operator, not silently added.</p>
+<p>Every gizmo ships with every port that could physically connect, whether or not there is a use today.</p>
+<h2>Time</h2>
+<p>Time is a graph input, not a global. A gizmo receives <code>t</code>; it never reads a clock. The reader owns the clock. Tick is the runtime step: evaluate the graph at <code>t</code>, pull-based, cached per tick.</p>
+<h2>The file</h2>
+<p>One gizmo, one file: <code>&lt;name&gt;.gizmo.json</code>. Name is one word; if it needs two it is two gizmos. Fields:</p>
+<pre><code>name        one word
+class       Generator | Transform | Operator | Sink | Container | Driver | Inverter
+ports       { in: [{name, type}], out: [{name, type}] }
+params      { name: {default, range?} }
+body        the maths. One of:
+              expr    a JS expression evaluated per tick (runs in a reader)
+              script  a path to a file run by an external runtime
+                      (Blender, Python) that emits ice
+              graph   {instantiate, wire, expose} — a Container
+dna         see below</code></pre>
+<h2>DNA</h2>
+<pre><code>id          content hash of body + ports. The true identity across readers.
+label       optional local catalogue label (Programmable Pixels uses PP-XXX
+            hex; other readers label as they like). Labels are per reader,
+            never global.
+author
+version     integer, local
+gizmo_md    version of this file the gizmo was made under
+why         { verbs: [], nouns: [], kills: [], because: "verbatim" }
+            verbs and nouns come from vocabulary.json; because is the
+            author's own words from taste triage. Written once at creation.
+            Read-only after.
+source      what taste stone, dictation or parent produced it
+lineage     [ids of parent gizmos]   "from -&gt; to : because"
+chemistry   [names] who the author thinks it should meet. Editable.
+history     [{id, patch, when}] who it has actually been wired to.
+            Appended by the reader. Read-only.
+apis        [{name, purpose, cost, key_name, last_seen_working}]
+            key_name only, never the key. The reader supplies keys.
+tags        []</code></pre>
+<p>Chemistry points forward and is a hope. History points back and is a fact. They are never the same field.</p>
+<h2>The folder</h2>
+<p>The <code>.gizmo.json</code> is the gizmo. The folder is its provenance: everything human that produced it.</p>
+<pre><code>&lt;name&gt;/
+  &lt;name&gt;.gizmo.json      the gizmo (liquid)
+  &lt;name&gt;.py | .js        the script, if body is a script
+  GIZMO.md               this file
+  images/                reference material
+  dictate.md             what it should be, verbatim
+  triage.md              why, from taste triage, verbatim becauses
+  goal.md                what done looks like: pass condition, shapes implied
+  verdict.json           last scored result, if any</code></pre>
+<p>Downloading the JSON alone gives a working gizmo. Downloading the folder gives its DNA and its reasons.</p>
+<h2>Containers</h2>
+<p>A Container is a gizmo whose body is a graph: it instantiates other gizmos by id, wires them, and exposes some of their ports as its own. A patch serialised is a Container waiting to be named. Its DNA lineage lists every gizmo inside it.</p>
+<h2>The reader</h2>
+<p>The reader watches a folder, loads every <code>.gizmo.json</code>, resolves wires by type, ticks the graph, and appends history. It has no opinion on appearance and no networking. Connection between readers is a gizmo, not a reader feature. The reader sandboxes gizmo bodies and caps API spend.</p>
+<h2>The skills</h2>
+<p><code>/gizmo</code> makes. Give it a folder; it runs the next missing step: dictate, triage, goal, build, verdict. Resumable, because the folder is the state. <code>/publish</code> freezes. Takes a finished gizmo and an operator-chosen label, bakes the ice into the catalogue, and offers the liquid for download. <code>/gizmo</code> never labels. <code>/publish</code> never edits.</p>
+<p>There are three ways to make a gizmo. The human way: images, dictation, taste triage, a because in your own words. The Claude way: /breed reads the folder and makes children from what is there. The quick way: a person hands Claude an image and a sentence and Claude drafts the why itself, marked as drafted. All three end in the same folder and the same file.</p>
+<h2>Read this first</h2>
+<p>Reading GIZMO.md answers what am I. Reading a gizmo's DNA answers why am I here. That is all the orientation a person or a Claude needs to pick one up cold.</p>
+</main>
+
+<footer>
+  Programmable Pixels — one operator
+</footer>
+
+</body>
+</html>

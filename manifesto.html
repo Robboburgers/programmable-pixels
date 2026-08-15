@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Manifesto — Programmable Pixels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#F6F6F4; --ink:#111111; --grey:#8C8C88; --line:#E3E3DF;
+  --font-display:"Univers Next","Univers LT Std","Univers","Helvetica Neue",Helvetica,"Inter",Arial,sans-serif;
+  --font-body:"Helvetica Neue",Helvetica,"Inter",Arial,sans-serif;
+  --font-mono:"IBM Plex Mono",monospace;
+  --col:min(680px,100%);
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html{ background:var(--ground); }
+body{ font-family:var(--font-body); color:var(--ink); background:var(--ground);
+  min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  -webkit-font-smoothing:antialiased; }
+header{ width:var(--col); padding:22px 20px; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+.wordmark{ font-family:var(--font-display); font-size:clamp(20px,5.6vw,28px); font-weight:800; letter-spacing:-.025em; text-transform:uppercase; }
+.wordmark a{ color:var(--ink); text-decoration:none; }
+.tabs{ display:flex; gap:16px; }
+.tabs a{ font-family:var(--font-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink); text-decoration:none; border-bottom:1px solid transparent; padding-bottom:2px; }
+.tabs a:hover,.tabs a.on{ border-bottom-color:var(--ink); }
+main{ width:var(--col); padding:10px 20px 60px; }
+main h1{ font-family:var(--font-display); font-weight:800; letter-spacing:-.02em; text-transform:uppercase;
+  font-size:clamp(22px,5vw,30px); margin:18px 0 14px; }
+main h2{ font-family:var(--font-display); font-weight:800; letter-spacing:-.01em;
+  font-size:clamp(16px,3.6vw,20px); margin:30px 0 10px; }
+main h3{ font-family:var(--font-mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; margin:22px 0 8px; }
+main p{ font-size:15px; line-height:1.65; margin:0 0 14px; }
+main em{ font-style:italic; }
+main ul{ margin:0 0 14px 20px; }
+main li{ font-size:15px; line-height:1.65; margin-bottom:4px; }
+main blockquote{ border-left:1px solid var(--ink); padding:2px 0 2px 18px; margin:0 0 14px; }
+main blockquote p{ margin-bottom:8px; }
+main blockquote p:last-child{ margin-bottom:0; }
+main code{ font-family:var(--font-mono); font-size:12px; }
+main pre{ border:1px solid var(--line); padding:12px 14px; overflow-x:auto; margin:0 0 14px; }
+main pre code{ font-size:12px; line-height:1.55; }
+main hr{ border:0; border-top:1px solid var(--line); margin:26px 0; }
+main .cite{ font-family:var(--font-mono); font-size:11px; color:var(--grey); letter-spacing:.02em; margin:-6px 0 14px; }
+main .cite code{ font-size:11px; color:var(--grey); }
+footer{ width:var(--col); padding:20px; margin-top:auto; border-top:1px solid var(--line);
+  font-family:var(--font-mono); font-size:11px; color:var(--grey); letter-spacing:.04em; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark"><a href="index.html">Programmable Pixels</a></div>
+  <nav class="tabs">
+    <a href="manifesto.html" class="on">Manifesto</a>
+    <a href="law.html">GIZMO.md</a>
+  </nav>
+</header>
+
+<main>
+<h1>THE MANIFESTO — why gizmos</h1>
+<p><em>Assembled 15 August 2026 from the operator's dictations and the documents built around them. Robbo's words are quoted verbatim; nothing here is new. Each section cites its source. GIZMO.md is the law; this is the reason.</em></p>
+<hr>
+<h2>1. What a gizmo is</h2>
+<p>Four lines, banked to Robbo's notebook first, in his hand:</p>
+<blockquote><p><strong>A gizmo is a function.</strong><br><strong>A patch is a nested expression.</strong><br><strong>The tick re-evaluates it forever.</strong><br><strong>The juice is the return value.</strong></p></blockquote>
+<p>A gizmo is not a picture, a demo, or an effect. It is a node: a piece of mathematics with typed ports, which computes and returns a value. The test: <em>can another gizmo be plugged into it, and can it be plugged into another gizmo?</em> If no, it isn't a gizmo. It's a screensaver.</p>
+<p>A gizmo that renders an image and stops is a dead end — nothing can consume it, nothing can drive it.</p>
+<blockquote><p><em>"A sprite is an answer. An equation is the question, still open."</em><br><em>"Bake what doesn't need to be asked. Keep everything else a question."</em></p></blockquote>
+<p class="cite"><code>creative_os/sessions/the-sticker-album-session.md · the_bench/the_gizmo_method.md · THE-OPEN-LETTER.md (Robbo, dictated)</code></p>
+<hr>
+<h2>2. The stud</h2>
+<p>Robbo's Lego insight:</p>
+<blockquote><p>Nobody asks whether a red sixer is <em>compatible</em> with a yellow twelver.<br>The question doesn't exist. Not because the bricks are the same — they're<br>wildly different — but because they all share <strong>one thing: the stud</strong>.</p><p>Standardise the boring part (how things connect)<br>and the interesting part (what things ARE) goes gloriously feral.</p></blockquote>
+<p>A kid's mishmash Lego house — yellow bricks, red bricks, sixers, long twelvers, nothing uniform — is only possible because the connection standard is absolute. The chaos isn't a bug. <strong>The chaos is the reward.</strong></p>
+<p><strong>Standardise the stud. Liberate the brick.</strong></p>
+<p class="cite"><code>creative_os/manifesto/06-the-stud.md (the Lego insight is Robbo's)</code></p>
+<hr>
+<h2>3. The wire</h2>
+<p>What travels down the wire between two gizmos? Robbo, dictated, 16 July 2026:</p>
+<blockquote><p>You're asking what travels down it, but it tells you.</p><p>Every parcel on the wire carries two things: what it is, and the thing<br>itself.</p><p>If it's BPM, it says BPM and it's a value — a hundred and twenty. If it's<br>a clock, it says clock and it's the tick. If it's the news, it says words<br>and it's the words someone's written. If it's music, it's the MIDI notes.<br>If it's a fractal, it's the equation for the fractal — the maths, a way of<br>describing it.</p><p>The wire never needs to know. The parcel says what it is.</p><p><code>{shape, value}</code> — the label, then the cargo. MIDI, not WAV.</p></blockquote>
+<p>The shape is the type of the <em>meaning</em>, not the type of the storage — a bpm and a percentage are both floats and must never bind. Two ports connect when their shapes match. Mismatch does not wire. Nothing else is checked, because <strong>every dead protocol died of helpfulness</strong>.</p>
+<blockquote><p>### The driver is swappable. The engine isn't.</p></blockquote>
+<p class="cite"><code>creative_os/manifesto/00-the-wire.md (Robbo, dictated) · THE-OPEN-LETTER.md</code></p>
+<hr>
+<h2>4. Liquid and ice</h2>
+<p>The words arrived mid-play, dictated over a running gizmo, 22 July 2026:</p>
+<blockquote><p>This is what we call the liquid, the water version. It's the mathematical<br>version, but we've got a way of making ice, freezing ice, and that's baked<br>pixels.</p></blockquote>
+<p>And the same day, the way back:</p>
+<blockquote><p>How can we bring in renders and use the values in them to drive other<br>things as well? So then the ice gets liquefied again and becomes a driver.</p></blockquote>
+<p>The rule, in Robbo's words, verbatim from the factory's birth certificate:</p>
+<blockquote><p><strong>"Render = freeze. Reader = melt."</strong></p></blockquote>
+<p>The repo carries only liquid — patches, gizmo JSONs, code, the trail. Ice stays local, or is sold. A published catalogue piece is ice; the gizmo behind it is liquid and free. Why liquid wins, Robbo, dictated:</p>
+<blockquote><p>"Every image I create has embedded in it the means to make that image<br>again. Everything I make becomes a palette of building blocks, and they<br>forever cross-pollinate each other, and the library just grows. And<br>mutates."</p><p>"Binaries are fossils. Text is alive."</p></blockquote>
+<p class="cite"><code>the_bench/dictation/2026-07-22-0655-world-engine-first-look.md · 2026-07-22-1301-hot-load-test.md (Robbo, dictated) · makers-factory/FOUNDING-BRIEF-the-makers-factory.md · creative_os/sessions/correspondence/REPLY-TO-CLOAKHOUSE-the-wire.md (Robbo, dictated) · GIZMO.md</code></p>
+<hr>
+<h2>5. Time and the tick</h2>
+<p>The tick re-evaluates it forever. Time is a graph input, not a global: the loop produces <code>t</code> and passes it <em>into</em> evaluation. Gizmos take <code>t</code> as an argument; they never read a clock themselves. This is what makes freezing, scrubbing, baking and tweening possible later.</p>
+<p>The tick supplies the time. No timestamp needed — the value on the wire is always now. If you want history, that's a gizmo.</p>
+<p>This was earned, not theorised. A flow field whose canvas never clears, where every mark is permanent — Robbo drove it and said:</p>
+<blockquote><p>"It's got to a point and kind of frozen — I've got to play with the tools<br>before it gets to the point of no return."</p></blockquote>
+<p>A thing with no clock and permanent ink cannot be driven. It can only be witnessed and restarted. <strong>The tick is what makes a thing playable.</strong> He found that by trying to play something that had no tick.</p>
+<p class="cite"><code>the_bench/the_gizmo_method.md · THE-OPEN-LETTER.md (Robbo quote from t06_207)</code></p>
+<hr>
+<h2>6. The reader</h2>
+<p>Nodes compute. Only the viewport draws. Every node is a pure function: takes inputs, returns a value — a node never touches a canvas. Rendering happens in exactly one place, the one Sink that owns the canvas and the loop, walks upstream, evaluates the graph, and paints.</p>
+<p>That Sink, grown up, is the reader: it watches a folder, loads every gizmo, resolves wires by type, ticks the graph. It has no opinion on appearance and no networking. On a self-owned page you build the Sink; in a host application, the host is the viewer. Who owns the heartbeat is the only thing that changes when a gizmo travels — and it's precisely why gizmos are portable in the first place.</p>
+<p class="cite"><code>the_bench/the_gizmo_method.md · GIZMO.md</code></p>
+<hr>
+<h2>7. The swap</h2>
+<p>The truest statement of what all this is:</p>
+<blockquote><p>Football stickers with your mates. "Got, got, got, need, need, got." Two<br>kids, two folders, a live diff run in your head, and a trade that settles<br>itself — no shop, no ledger, no middleman. That is the whole economy, and<br>a seven-year-old runs it with no software at all.</p><p>Bluejacking on the train, when Bluetooth was new. Making little gifts for<br>phones that couldn't even hold a video, scanning the carriage for who had<br>Bluetooth on, asking to pair, the stranger going "what the hell" and then<br>"okay." Look in my folder, I'll look in yours. Wanna swap?</p></blockquote>
+<p>This invents no new behaviour. It removes the friction from what humans already do the instant you hand them the barest tools: make, share, scan, swap. The instinct is pre-baked. The OS just gives it better cables. And it's <em>warm</em> — mates in a playground, a stranger saying okay — because when there's no gatekeeper, sharing is just curiosity about each other's stuff.</p>
+<p>The playground is the system. Gizmos are the stickers. "Got, got, got, need" is the search engine. Nobody stands at the fence taking a coin off every swap.</p>
+<p>It grows by agreement, not force — the way a word grows. One person uses it, it's useful, someone else uses the same one so their things fit, a scene condenses around a shared shape. N=2 is the whole strategy, not a humble start: two people agreeing on a cable end and it's already alive.</p>
+<p class="cite"><code>creative_os/manifesto/CREATIVE-OS-MANIFESTO.md (Robbo's frame, recorded) · creative_os/sessions/the-sticker-album-session.md</code></p>
+<hr>
+<h2>8. Free</h2>
+<blockquote><p>A shared language of cable ends. Coalesce around the same ones and it<br>grows. What flows through can be anything — and that it doesn't matter<br>what's inside is the whole point, because there's nothing inside to own.</p></blockquote>
+<p>You can't buy a handshake. MIDI proved it: a 1983 agreement about the shape of the holes, still standing forty years later while every instrument and company inside it came and went. The cable ends outlived all of it precisely because they stayed empty.</p>
+<p>Free to make, free to share; swap is the native trade. Gizmos copy for nothing, so worth rides a gift-and-swap economy, not scarcity. And it should stay too small to take:</p>
+<blockquote><p>"Creative OS shouldn't be a platform — it should be a protocol so small it<br>can't be owned. You can't hijack a handshake."</p><p>"Every gizmo is a two-way jack. The world stops broadcasting at you the<br>moment you can patch back."</p></blockquote>
+<blockquote><p>Everything here is free: the gizmos, this map, and the reader. Clone it,<br>build, share. Free is not a kindness, it is what makes the swap work.</p></blockquote>
+<p class="cite"><code>creative_os/sessions/the-sticker-album-session.md · CREATIVE-OS-MANIFESTO.md · the-yellow-wire-session.md (Robbo) · GIZMO.md</code></p>
+<hr>
+<h2>Not yet written</h2>
+<p>Lines the operator has said but never dictated to a file, flagged in the vision doc as TODO. They belong here, in his words, when he records them:</p>
+<ul><li>"Constraints create features" — the exact wording.</li><li>"Your weird is your worth."</li><li>"Money moves or it's not money."</li><li>"One brick at a time."</li><li>The house line — "all the bricks are different colours, but it's still a</li></ul>
+<p>house, and it's your house."</p>
+<p class="cite"><code>creative_os/manifesto/01-vision.md (TODO list)</code></p>
+</main>
+
+<footer>
+  Programmable Pixels — one operator
+</footer>
+
+</body>
+</html>

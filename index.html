@@ -180,14 +180,38 @@ footer{
 }
 .dl-row a{ color:var(--ink); text-decoration:none; border-bottom:1px solid var(--line); }
 .dl-row a:hover{ border-bottom-color:var(--ink); }
+
+/* ---- nav tabs + free line ---- */
+.tabs{ display:flex; gap:16px; }
+.tabs a{ font-family:var(--font-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink); text-decoration:none; border-bottom:1px solid transparent; padding-bottom:2px; }
+.tabs a:hover{ border-bottom-color:var(--ink); }
+.freeline{ width:var(--col); padding:0 20px 14px; font-family:var(--font-mono); font-size:11px;
+  letter-spacing:.04em; color:var(--grey); }
+.freeline a{ color:var(--ink); }
+
+/* ---- mail gate (first download) ---- */
+.gate{ padding:10px 0 4px; }
+.gate p{ font-family:var(--font-mono); font-size:11px; color:var(--grey); margin:0 0 8px; letter-spacing:.04em; }
+.gate form{ display:flex; gap:8px; }
+.gate input[type=email]{ font-family:var(--font-mono); font-size:12px; padding:6px 8px;
+  border:1px solid var(--line); background:var(--ground); color:var(--ink); flex:1; min-width:0; }
+.gate button{ font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+  padding:6px 12px; border:1px solid var(--ink); background:var(--ink); color:var(--ground); cursor:pointer; }
 </style>
 </head>
 <body>
 
 <header>
   <div class="wordmark">Programmable Pixels</div>
+  <nav class="tabs">
+    <a href="manifesto.html">Manifesto</a>
+    <a href="law.html">GIZMO.md</a>
+  </nav>
   <div class="live"><span class="dot"></span>Live</div>
 </header>
+
+<div class="freeline">Everything here is free. Clone it, build, share. Read the manifesto if you want to know <a href="manifesto.html">why</a>.</div>
 
 <main id="feed"></main>
 
@@ -1451,11 +1475,77 @@ document.getElementById("yr").textContent = new Date().getFullYear();
   });
 })();
 
-/* Email — front-end only. Wire to Buttondown / Formspree later. */
-document.getElementById("lockform").addEventListener("submit", e=>{
-  e.preventDefault();
-  document.getElementById("lockmsg").textContent = "Noted — mail service not wired yet.";
-});
+/* ============================================================
+   MAIL GATE — one list, two doors (amendments-03).
+   The follow form (PP-002) and the first-download gate both post
+   to FORM_ENDPOINT with {email, first_gizmo, date}. Paste a
+   Formspree/Buttondown endpoint below; while empty, the forms
+   still gate but nothing leaves the browser.
+   Note: the never-ask-again flag uses localStorage, which
+   amendments-03 requires and the CLAUDE.md design rules forbid —
+   flagged to the operator, amendment followed.
+   ============================================================ */
+(function(){
+  const FORM_ENDPOINT = ""; // e.g. https://formspree.io/f/XXXXXXXX
+  const KEY = "pp-mail-ok";
+  const seen = () => { try { return localStorage.getItem(KEY) === "1"; } catch(e){ return true; } };
+  const mark = () => { try { localStorage.setItem(KEY, "1"); } catch(e){} };
+
+  function send(email, gizmo){
+    if (!FORM_ENDPOINT) return Promise.resolve(false);
+    const data = new FormData();
+    data.append("email", email);
+    data.append("first_gizmo", gizmo);
+    data.append("date", new Date().toISOString().slice(0,10));
+    return fetch(FORM_ENDPOINT, { method:"POST", body:data, headers:{ Accept:"application/json" } })
+      .then(() => true).catch(() => false);
+  }
+
+  /* PP-002 follow form */
+  const lockform = document.getElementById("lockform");
+  if (lockform) lockform.addEventListener("submit", e => {
+    e.preventDefault();
+    const email = lockform.querySelector("input[type=email]").value;
+    send(email, "PP-002").then(sent => {
+      mark();
+      document.getElementById("lockmsg").textContent =
+        sent ? "Done — you're on the list." : "Noted — mail service not wired yet.";
+    });
+  });
+
+  /* first-download gate */
+  document.querySelectorAll(".dl-row a").forEach(a => {
+    a.addEventListener("click", e => {
+      if (seen()) return; // gated once, ever; later downloads are one click
+      e.preventDefault();
+      const row = a.closest(".dl-row");
+      const article = a.closest("article");
+      const cat = article ? article.querySelector(".cat").textContent : "";
+      if (row.nextElementSibling && row.nextElementSibling.classList.contains("gate")) {
+        row.nextElementSibling.querySelector("input").focus();
+        return;
+      }
+      const gate = document.createElement("div");
+      gate.className = "gate";
+      gate.innerHTML = `<p>First download: leave an email so we can tell you when new numbers drop. Free forever after. Used for that, and nothing else.</p>
+        <form><input type="email" required placeholder="you@somewhere.net" aria-label="Email address"><button type="submit">Send + download</button></form>`;
+      row.after(gate);
+      gate.querySelector("form").addEventListener("submit", ev => {
+        ev.preventDefault();
+        const email = gate.querySelector("input").value;
+        send(email, cat).then(() => {
+          mark();
+          gate.remove();
+          const tmp = document.createElement("a");
+          tmp.href = a.getAttribute("href");
+          tmp.setAttribute("download", "");
+          document.body.appendChild(tmp); tmp.click(); tmp.remove();
+        });
+      });
+      gate.querySelector("input").focus();
+    });
+  });
+})();
 </script>
 </body>
 </html>

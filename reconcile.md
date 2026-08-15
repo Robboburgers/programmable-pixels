@@ -1,7 +1,8 @@
 # RECONCILE — GIZMO.md v1 vs what is built
 
 Repo Claude, 15 August 2026. Evidence from `index.html`, `tools/`, `gizmo-analysis.md`.
-Incorporates `amendments.md` (free-clause, repos-and-swaps, flat-folder rule → §7).
+Incorporates `amendments.md` (free-clause, repos-and-swaps, flat-folder rule → §7)
+and `amendments-02.md` (nested-function model, purity question → §8).
 
 ## 1. Schema
 
@@ -101,5 +102,25 @@ implements the same built-ins** — the flat-folder rule holds for gizmo→gizmo
 but moves the burden onto GIZMO.md pinning the expr built-in set (same gap as
 §3). The helpers are small (~60 lines total); an alternative ruling is to
 inline them into each travelling folder, trading purity for weight.
+
+## 8. Purity (per amendments-02)
+
+Every one of the 165 bodies is already a pure function of (x, y, t, params) —
+closed expressions, no state, and zero bodies reference a clock, `random`,
+`Date`, or `performance` (verified against all `do_pixel` strings). `t`
+arrives as an argument everywhere. Two impurities exist, and both are
+**reader-side**, not gizmo-side: (a) the legacy engine's `noise2` permutation
+table is seeded from `Math.random()` at page load, so identical liquid renders
+differently per visit — already fixed in `reader.js` (fixed seed 0x50503001),
+the legacy IIFE still has it; (b) `t` in the legacy engine is a per-gizmo
+counter that pauses when the piece scrolls offscreen, so two gizmos' clocks
+drift — harmless standalone, but a patch needs one shared `t`, which
+`reader.js` already provides (single tick, per-tick cache). Conclusion: the
+corpus is fully compatible with the nested-function model; the refactor work
+is entirely in the reader, none in the gizmos. One gap against amendments-02:
+the "why lives twice" rule (structured in `dna.why` + same words as a comment
+in the body) — `expr` bodies are single-line strings with no comment syntax
+defined; needs a ruling on where the comment goes (a `body.note` field, or
+permit `/* … */` in expr).
 
 Awaiting operator rulings before touching site, POSTS, or numbers.

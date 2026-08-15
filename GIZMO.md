@@ -137,6 +137,12 @@ triage, goal, build, verdict. Resumable, because the folder is the state.
 bakes the ice into the catalogue, and offers the liquid for download.
 `/gizmo` never labels. `/publish` never edits.
 
+There are three ways to make a gizmo. The human way: images, dictation,
+taste triage, a because in your own words. The Claude way: /breed reads
+the folder and makes children from what is there. The quick way: a person
+hands Claude an image and a sentence and Claude drafts the why itself,
+marked as drafted. All three end in the same folder and the same file.
+
 ## Read this first
 
 Reading GIZMO.md answers what am I. Reading a gizmo's DNA answers why am I
