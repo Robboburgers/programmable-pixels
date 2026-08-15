@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Programmable Pixels — canvas</title>
+<meta name="description" content="Programmable Pixels — the whole catalogue as one square. Every cell is a gizmo, running live.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   PROGRAMMABLE PIXELS — the canvas: nested squares.
+   The catalogue laid out as a quadtree; one reader ticks it all.
+   Sage ground, black ink, hairline grid. The player shows what
+   the selected cell returns; escape returns to the root.
+   ============================================================ */
+:root{
+  --ground:  #F6F6F4;
+  --ink:     #111111;
+  --grey:    #8C8C88;
+  --line:    #E3E3DF;
+  --media:   #0B0B0C;
+  --sage:      #B0BAB4;   /* the plane's ground */
+  --sage-line: #99A49D;   /* hairline grid, a step darker */
+  --font-display: "Univers Next", "Univers LT Std", "Univers", "Helvetica Neue", Helvetica, "Inter", Arial, sans-serif;
+  --font-body: "Helvetica Neue", Helvetica, "Inter", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+  --col: min(1180px, 100%);
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html{ background:var(--ground); }
+body{
+  font-family:var(--font-body);
+  color:var(--ink);
+  background:var(--ground);
+  min-height:100vh;
+  display:flex; flex-direction:column; align-items:center;
+  -webkit-font-smoothing:antialiased;
+}
+
+header{
+  width:var(--col);
+  padding:22px 20px;
+  display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+}
+.wordmark{
+  font-family:var(--font-display);
+  font-size:clamp(20px, 5.6vw, 28px); font-weight:800; letter-spacing:-.025em;
+  text-transform:uppercase;
+}
+.tabs{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.08em;
+  text-transform:uppercase; display:flex; gap:16px;
+}
+.tabs a{ color:var(--grey); text-decoration:none; }
+.tabs a:hover{ color:var(--ink); }
+.tabs a.on{ color:var(--ink); border-bottom:1px solid var(--ink); padding-bottom:2px; }
+.live{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.08em;
+  color:var(--grey); display:flex; align-items:center; gap:6px;
+  text-transform:uppercase;
+}
+.live .dot{ width:6px; height:6px; border-radius:50%; background:var(--ink); animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.2} }
+
+/* ---- the plane and the player, side by side; stacked when narrow ---- */
+main{
+  width:var(--col); padding:0 20px 40px;
+  display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;
+}
+.plane-wrap{
+  flex:1 1 520px; min-width:min(520px, 100%);
+  display:flex; justify-content:center;
+}
+#plane{
+  width:100%; max-width:min(88vh, 900px); aspect-ratio:1/1;
+  background:var(--sage); display:block; cursor:pointer;
+  touch-action:manipulation;
+}
+.player{
+  flex:1 1 300px; min-width:280px; max-width:420px;
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.04em;
+}
+.player .p-title{
+  font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--grey);
+  margin-bottom:8px;
+}
+.player .p-head{ color:var(--ink); margin-bottom:10px; line-height:1.6; }
+.player .p-head .sel{ font-weight:500; }
+.player .p-tabs{ display:flex; gap:12px; margin-bottom:8px; flex-wrap:wrap; }
+.player .p-tabs button{
+  font:inherit; background:none; border:none; cursor:pointer;
+  color:var(--grey); text-transform:none; padding:0 0 2px;
+}
+.player .p-tabs button.on{ color:var(--ink); border-bottom:1px solid var(--ink); }
+.player .p-stage{ margin-bottom:10px; }
+.player .p-stage .frame{
+  width:100%; aspect-ratio:1/1; background:var(--media); border-radius:2px;
+  overflow:hidden; position:relative;
+}
+.player .p-stage .frame canvas{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+.player .p-stage .scope{
+  width:100%; aspect-ratio:2/1; background:var(--sage); border-radius:2px; display:block;
+}
+.player .p-stage .wordsout{
+  font-family:var(--font-display); font-size:17px; font-weight:500; line-height:1.5;
+  color:var(--ink); white-space:pre-wrap; word-break:break-word;
+  min-height:120px; border-top:1px solid var(--line); padding-top:10px;
+}
+.player .p-read{ color:var(--ink); margin-bottom:8px; min-height:15px; }
+.player .p-note{ color:var(--grey); line-height:1.7; }
+
+footer{
+  width:var(--col); padding:26px 20px 40px;
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.08em;
+  color:var(--grey); text-transform:uppercase;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">Programmable Pixels</div>
+  <nav class="tabs">
+    <a href="index.html">Feed</a>
+    <a href="canvas.html" class="on">Canvas</a>
+    <a href="manifesto.html">Manifesto</a>
+    <a href="law.html">GIZMO.md</a>
+    <a href="https://github.com/Robboburgers/programmable-pixels">Clone</a>
+  </nav>
+  <div class="live"><span class="dot"></span>Live</div>
+</header>
+
+<main>
+  <div class="plane-wrap"><canvas id="plane"></canvas></div>
+  <aside class="player">
+    <div class="p-title">Player</div>
+    <div class="p-head" id="phead"></div>
+    <div class="p-tabs" id="ptabs"></div>
+    <div class="p-stage" id="pstage"></div>
+    <div class="p-read" id="pread"></div>
+    <div class="p-note" id="pnote"></div>
+  </aside>
+</main>
+
+<footer>
+  Programmable Pixels — one operator
+</footer>
+
+<script src="reader.js"></script>
+<script>
+/* ============================================================
+   THE CANVAS IS THE CATALOGUE AS ONE SQUARE.
+   Layout is a quadtree: a cell holds one gizmo or splits into
+   four. Every cell is live — one reader, one shared t. Wires are
+   adjacency, not lines. The player is a Sink: it accepts every
+   type and picks the rendering.
+   ============================================================ */
+(async function(){
+  if (typeof Reader === "undefined") return;
+
+  const cat = await fetch("catalogue.json").then(r => r.json());
+  const gizmos = cat.gizmos.slice();
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reader = Reader.createReader();
+
+  /* ---- one node per catalogue entry; the label is the id ---- */
+  const nodes = new Map(); // id -> {g, id, kind}
+  for (const g of gizmos) {
+    const id = g.label.toLowerCase().replace(/-/g, "");
+    try {
+      reader.instantiate(id, g);
+      nodes.set(id, { g, id, kind: cellKind(g) });
+    } catch (e) {
+      console.warn(g.label, "did not instantiate:", e);
+      nodes.set(id, { g, id, kind: "card" });
+    }
+  }
+  const items = gizmos.map(g => nodes.get(g.label.toLowerCase().replace(/-/g, "")));
+
+  /* How a cell shows itself. Generators with a field render it;
+     self-ticking float sources draw a hairline; unwired Transforms
+     are their label and ports in mono. */
+  function cellKind(g){
+    const outs = (g.ports && g.ports.out) || [];
+    if (g.class === "Generator" && outs.some(p => p.type === "field" || p.type === "visual")) return "field";
+    if ((g.class === "Generator" || g.class === "Driver") && outs.some(p => p.type === "float")) return "plot";
+    return "card";
+  }
+
+  /* ---- deterministic quadtree: same catalogue, same picture ---- */
+  function hash(s){
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h >>> 0) / 4294967296;
+  }
+  function buildTree(list, path, depth){
+    if (!list.length) return { empty: true };
+    if (list.length === 1) return { item: list[0] };
+    const n = list.length, counts = [0, 0, 0, 0];
+    /* hash-permuted quadrant order so big cells and empty ground
+       scatter instead of always settling bottom-right */
+    const order = [0, 1, 2, 3];
+    for (let i = 3; i > 0; i--) {
+      const j = Math.floor(hash(path + "s" + i) * (i + 1));
+      const tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+    }
+    if (depth < 6 && n >= 6 && hash(path + "?") < 0.55) {
+      /* one quadrant stays whole — a big cell; density is depth */
+      counts[order[0]] = 1;
+      const rest = n - 1;
+      for (let k = 1; k < 4; k++) counts[order[k]] = Math.floor(rest / 3) + (k - 1 < rest % 3 ? 1 : 0);
+    } else {
+      for (let k = 0; k < 4; k++) counts[order[k]] = Math.floor(n / 4) + (k < n % 4 ? 1 : 0);
+    }
+    const kids = []; let off = 0;
+    for (let q = 0; q < 4; q++) { kids.push(buildTree(list.slice(off, off + counts[q]), path + q, depth + 1)); off += counts[q]; }
+    return { kids };
+  }
+  const tree = buildTree(items, "pp", 0);
+
+  /* ---- geometry: walk the tree, place leaves ---- */
+  const plane = document.getElementById("plane");
+  const pctx = plane.getContext("2d");
+  let leaves = [], side = 0, dpr = 1;
+
+  function placeLeaves(){
+    leaves = [];
+    (function walk(nd, x, y, w){
+      if (nd.kids) {
+        const h = w / 2;
+        walk(nd.kids[0], x, y, h);      walk(nd.kids[1], x + h, y, h);
+        walk(nd.kids[2], x, y + h, h);  walk(nd.kids[3], x + h, y + h, h);
+        return;
+      }
+      const leaf = { x, y, w, item: nd.item || null };
+      if (leaf.item && leaf.item.kind === "field") {
+        const res = Math.max(12, Math.min(48, Math.round(w / (2.5 * dpr) ) * (dpr > 1 ? 2 : 1)));
+        leaf.res = res;
+        leaf.off = document.createElement("canvas");
+        leaf.off.width = res; leaf.off.height = res;
+        leaf.octx = leaf.off.getContext("2d");
+        leaf.img = leaf.octx.createImageData(res, res);
+      }
+      if (leaf.item && leaf.item.kind === "plot") leaf.buf = [];
+      leaves.push(leaf);
+    })(tree, 0, 0, side);
+  }
+  function fit(){
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    const css = plane.getBoundingClientRect().width || 640;
+    side = Math.round(css * dpr);
+    plane.width = side; plane.height = side;
+    placeLeaves();
+  }
+  fit();
+  window.addEventListener("resize", fit);
+
+  /* ---- ink on sage: a field value is ink coverage ---- */
+  const SAGE = [176, 186, 180], INK = [17, 17, 17];
+  function drawField(leaf, t){
+    const res = leaf.res, buf = leaf.img.data;
+    const field = reader.pull(leaf.item.id, t);
+    for (let py = 0; py < res; py++) {
+      const ny = (py + 0.5) / res;
+      for (let px = 0; px < res; px++) {
+        let v = field((px + 0.5) / res, ny);
+        v = v < 0 ? 0 : v > 1 ? 1 : v;
+        const i = (py * res + px) * 4;
+        buf[i]   = SAGE[0] + (INK[0] - SAGE[0]) * v;
+        buf[i+1] = SAGE[1] + (INK[1] - SAGE[1]) * v;
+        buf[i+2] = SAGE[2] + (INK[2] - SAGE[2]) * v;
+        buf[i+3] = 255;
+      }
+    }
+    leaf.octx.putImageData(leaf.img, 0, 0);
+    pctx.imageSmoothingEnabled = false;
+    pctx.drawImage(leaf.off, leaf.x, leaf.y, leaf.w, leaf.w);
+  }
+  function firstFloatPort(g){
+    return ((g.ports && g.ports.out) || []).find(p => p.type === "float");
+  }
+  function pullPort(nd, t, portName){
+    const v = reader.pull(nd.id, t);
+    const node = reader.nodes.get(nd.id);
+    return (node && node.kind === "code") ? v[portName] : v;
+  }
+  function drawPlot(leaf, t){
+    const port = firstFloatPort(leaf.item.g);
+    if (!port) return drawCard(leaf);
+    let v = pullPort(leaf.item, t, port.name);
+    if (typeof v !== "number" || !isFinite(v)) v = 0;
+    const cap = Math.max(24, Math.round(leaf.w / 3));
+    leaf.buf.push(v); if (leaf.buf.length > cap) leaf.buf.shift();
+    const lo = Math.min(...leaf.buf), hi = Math.max(...leaf.buf);
+    const span = (hi - lo) || 1;
+    pctx.strokeStyle = "rgb(17,17,17)";
+    pctx.lineWidth = Math.max(1, dpr * 0.75);
+    pctx.beginPath();
+    const pad = leaf.w * 0.18;
+    for (let i = 0; i < leaf.buf.length; i++) {
+      const px = leaf.x + pad + (leaf.w - 2 * pad) * (i / Math.max(1, cap - 1));
+      const py = leaf.y + leaf.w - pad - (leaf.w - 2 * pad) * ((leaf.buf[i] - lo) / span);
+      i ? pctx.lineTo(px, py) : pctx.moveTo(px, py);
+    }
+    pctx.stroke();
+  }
+  function drawCard(leaf){
+    /* an unwired thinker: its name and ports, in mono, if there is room */
+    if (leaf.w < 34 * dpr) return;
+    const g = leaf.item.g, fs = Math.max(8, Math.min(11, leaf.w / (9 * dpr))) * dpr;
+    pctx.fillStyle = "rgb(17,17,17)";
+    pctx.font = "500 " + fs + "px 'IBM Plex Mono', monospace";
+    pctx.textBaseline = "top";
+    pctx.fillText(g.name, leaf.x + 5 * dpr, leaf.y + 5 * dpr, leaf.w - 10 * dpr);
+    if (leaf.w > 70 * dpr) {
+      pctx.fillStyle = "rgb(80,88,83)";
+      pctx.font = fs * 0.85 + "px 'IBM Plex Mono', monospace";
+      const ins  = ((g.ports && g.ports.in)  || []).map(p => p.name).join(" ");
+      const outs = ((g.ports && g.ports.out) || []).map(p => p.name).join(" ");
+      if (ins)  pctx.fillText("in  " + ins,  leaf.x + 5 * dpr, leaf.y + 5 * dpr + fs * 1.5, leaf.w - 10 * dpr);
+      if (outs) pctx.fillText("out " + outs, leaf.x + 5 * dpr, leaf.y + 5 * dpr + fs * 2.6, leaf.w - 10 * dpr);
+    }
+  }
+
+  /* ---- the tick: one shared t, cells staggered over two frames ---- */
+  let t = 0, frame = 0, selected = null;
+  function render(){
+    pctx.fillStyle = "rgb(" + SAGE.join(",") + ")";
+    pctx.fillRect(0, 0, side, side);
+    for (let i = 0; i < leaves.length; i++) {
+      const leaf = leaves[i];
+      if (leaf.item) {
+        try {
+          if (leaf.item.kind === "field") { if ((frame + i) % 2 === 0 || !leaf.painted) { drawField(leaf, t); leaf.painted = true; } else pctx.drawImage(leaf.off, leaf.x, leaf.y, leaf.w, leaf.w); }
+          else if (leaf.item.kind === "plot") drawPlot(leaf, t);
+          else drawCard(leaf);
+        } catch (e) { /* a bad body stays a quiet cell */ }
+      }
+      pctx.strokeStyle = "rgb(153,164,157)";
+      pctx.lineWidth = dpr;
+      pctx.strokeRect(leaf.x + 0.5, leaf.y + 0.5, leaf.w - 1, leaf.w - 1);
+      if (leaf.item && leaf.item.kind === "field" && leaf.w >= 64 * dpr) {
+        pctx.fillStyle = "rgba(17,17,17,0.75)";
+        pctx.font = 8.5 * dpr + "px 'IBM Plex Mono', monospace";
+        pctx.textBaseline = "alphabetic";
+        pctx.fillText(leaf.item.g.label, leaf.x + 5 * dpr, leaf.y + leaf.w - 5 * dpr);
+      }
+    }
+    if (selected) {
+      pctx.strokeStyle = "rgb(17,17,17)";
+      pctx.lineWidth = 2 * dpr;
+      pctx.strokeRect(selected.x + dpr, selected.y + dpr, selected.w - 2 * dpr, selected.w - 2 * dpr);
+    }
+    playerTick(t);
+    if (!reduced) t += 1;
+    frame += 1;
+    requestAnimationFrame(render);
+  }
+
+  /* ============================================================
+     THE PLAYER — a Sink that accepts every type and picks the
+     rendering. It shows what the selected cell returns; with
+     nothing selected it faces the root.
+     ============================================================ */
+  const phead = document.getElementById("phead"),
+        ptabs = document.getElementById("ptabs"),
+        pstage = document.getElementById("pstage"),
+        pread = document.getElementById("pread"),
+        pnote = document.getElementById("pnote");
+  let target = null, tabPort = null, stageKind = null, stageCtx = null,
+      stageImg = null, scope = null, scopeBuf = [], wordsEl = null;
+  const PRES = 192;
+
+  function showRoot(){
+    target = null; tabPort = null; stageKind = null;
+    phead.innerHTML = '<span class="sel">root</span> — the catalogue, ' + gizmos.length + " gizmos";
+    ptabs.innerHTML = ""; pstage.innerHTML = ""; pread.textContent = "";
+    pnote.textContent = "the root has no output port wired — nothing is boxed yet. select a cell to hear it out; escape returns here.";
+  }
+  function esc(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+  function select(leaf){
+    if (!leaf || !leaf.item) { selected = null; showRoot(); return; }
+    selected = leaf;
+    const g = leaf.item.g;
+    target = leaf.item;
+    phead.innerHTML = '<span class="sel">' + esc(g.label) + " · " + esc(g.name) + "</span> — " + esc(g.class);
+    const outs = (g.ports && g.ports.out) || [];
+    ptabs.innerHTML = "";
+    if (outs.length > 1) {
+      outs.forEach(p => {
+        const b = document.createElement("button");
+        b.textContent = p.name + " · " + p.type;
+        if (p.name === (tabPort && tabPort.name)) b.classList.add("on");
+        b.addEventListener("click", () => setTab(p));
+        ptabs.appendChild(b);
+      });
+    }
+    setTab(outs[0] || null);
+  }
+  function setTab(port){
+    tabPort = port;
+    Array.from(ptabs.children).forEach(b =>
+      b.classList.toggle("on", port && b.textContent.indexOf(port.name + " ·") === 0));
+    pstage.innerHTML = ""; pread.textContent = ""; pnote.textContent = "";
+    scopeBuf = []; stageKind = null;
+    if (!port) { pnote.textContent = "no output port — nothing to show."; return; }
+    if (port.type === "field" || port.type === "visual" || port.type === "image" || port.type === "particles") {
+      stageKind = "pixels";
+      const fr = document.createElement("div"); fr.className = "frame";
+      const cv = document.createElement("canvas"); cv.width = PRES; cv.height = PRES;
+      fr.appendChild(cv); pstage.appendChild(fr);
+      stageCtx = cv.getContext("2d");
+      stageImg = stageCtx.createImageData(PRES, PRES);
+    } else if (port.type === "words") {
+      stageKind = "words";
+      wordsEl = document.createElement("div"); wordsEl.className = "wordsout";
+      pstage.appendChild(wordsEl);
+    } else if (port.type === "float" || port.type === "trigger" || port.type === "vec2") {
+      stageKind = "scope";
+      scope = document.createElement("canvas"); scope.className = "scope";
+      scope.width = 360; scope.height = 180;
+      pstage.appendChild(scope);
+    } else {
+      pnote.textContent = "this reader cannot output " + port.type + " yet — nearest readout below.";
+      stageKind = "scope";
+      scope = document.createElement("canvas"); scope.className = "scope";
+      scope.width = 360; scope.height = 180;
+      pstage.appendChild(scope);
+    }
+  }
+  function playerTick(t){
+    if (!target || !tabPort || !stageKind) return;
+    let v;
+    try { v = pullPort(target, t, tabPort.name); } catch (e) { return; }
+    if (stageKind === "pixels" && typeof v === "function") {
+      const buf = stageImg.data;
+      for (let py = 0; py < PRES; py++) {
+        const ny = (py + 0.5) / PRES;
+        for (let px = 0; px < PRES; px++) {
+          let s = v((px + 0.5) / PRES, ny);
+          s = s < 0 ? 0 : s > 1 ? 1 : s;
+          const c = (s * 255) | 0, i = (py * PRES + px) * 4;
+          buf[i] = c; buf[i+1] = c; buf[i+2] = c; buf[i+3] = 255;
+        }
+      }
+      stageCtx.putImageData(stageImg, 0, 0);
+    } else if (stageKind === "words") {
+      wordsEl.textContent = typeof v === "string" ? v : "";
+      pread.textContent = tabPort.name + " · " + (typeof v === "string" ? v.length + " chars" : "—");
+    } else if (stageKind === "scope") {
+      const num = typeof v === "number" && isFinite(v) ? v : 0;
+      scopeBuf.push(num); if (scopeBuf.length > 300) scopeBuf.shift();
+      const c = scope.getContext("2d");
+      c.fillStyle = "rgb(176,186,180)"; c.fillRect(0, 0, scope.width, scope.height);
+      const lo = Math.min(...scopeBuf), hi = Math.max(...scopeBuf), span = (hi - lo) || 1;
+      c.strokeStyle = "rgb(17,17,17)"; c.lineWidth = 1; c.beginPath();
+      for (let i = 0; i < scopeBuf.length; i++) {
+        const px = 8 + (scope.width - 16) * (i / 299);
+        const py = scope.height - 12 - (scope.height - 24) * ((scopeBuf[i] - lo) / span);
+        i ? c.lineTo(px, py) : c.moveTo(px, py);
+      }
+      c.stroke();
+      pread.textContent = tabPort.name + " · " + num.toFixed(3);
+    }
+  }
+
+  /* ---- select by pointing; the ground and escape go back up ---- */
+  plane.addEventListener("click", ev => {
+    const r = plane.getBoundingClientRect();
+    const x = (ev.clientX - r.left) / r.width * side;
+    const y = (ev.clientY - r.top) / r.height * side;
+    const hit = leaves.find(l => l.item && x >= l.x && x < l.x + l.w && y >= l.y && y < l.y + l.w);
+    select(hit || null);
+  });
+  window.addEventListener("keydown", ev => { if (ev.key === "Escape") select(null); });
+
+  showRoot();
+  render();
+})();
+</script>
+</body>
+</html>
