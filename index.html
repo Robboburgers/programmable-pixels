@@ -205,6 +205,10 @@ footer{
 .src-link{ font-family:var(--font-mono); font-size:11px; letter-spacing:.04em;
   color:var(--grey); text-decoration:none; }
 .src-link:hover{ color:var(--ink); }
+.fb{ font-family:var(--font-mono); font-size:11px; letter-spacing:.04em;
+  border:0; background:none; padding:0; color:var(--grey); cursor:pointer; }
+.fb:hover{ color:var(--ink); }
+.fb.on{ color:var(--ink); border-bottom:1px solid var(--ink); }
 
 /* ---- taste triage (tell it what it feels like) ---- */
 .triage-line{ font-family:var(--font-mono); font-size:11px; color:var(--grey);
@@ -1013,7 +1017,7 @@ const R = {
       ${sliders ? `<div class="gizmo-panel" data-gizmo="${id}">${sliders}</div>` : ""}
       <div class="dl-row">${p.downloads.map(d=>`<a href="${d.href}" download>${d.label}</a>`).join("")}<a class="src-link" href="${REPO}" target="_blank" rel="noopener">source</a></div>
       ${p.dna && p.dna.why ? `<p>${p.dna.why}</p>` : ""}
-      <div class="lane-links"><div class="triage-line" data-cat="${p.cat}">Thoughts?</div><a class="src-link" href="${REPO}" target="_blank" rel="noopener">source</a></div></article>`;
+      <div class="lane-links"><div class="triage-line" data-cat="${p.cat}">Thoughts?</div><button type="button" class="fb" data-fb="like" data-cat="${p.cat}">like</button><button type="button" class="fb" data-fb="love" data-cat="${p.cat}">love</button><a class="src-link" href="${REPO}" target="_blank" rel="noopener">source</a></div></article>`;
   },
 
   gizmo:(p)=>{
@@ -1026,7 +1030,7 @@ const R = {
       <div class="corner">${p.cat}</div></div></div>
       ${sliders ? `<div class="gizmo-panel" data-gizmo="${id}">${sliders}</div>` : ""}
       ${p.dna && p.dna.why ? `<p>${p.dna.why}</p>` : ""}
-      <div class="lane-links"><div class="triage-line" data-cat="${p.cat}">Thoughts?</div><a class="src-link" href="${REPO}" target="_blank" rel="noopener">source</a></div></article>`;
+      <div class="lane-links"><div class="triage-line" data-cat="${p.cat}">Thoughts?</div><button type="button" class="fb" data-fb="like" data-cat="${p.cat}">like</button><button type="button" class="fb" data-fb="love" data-cat="${p.cat}">love</button><a class="src-link" href="${REPO}" target="_blank" rel="noopener">source</a></div></article>`;
   },
 
   webgl:(p)=>`<article class="post">${tagRow(p)}<h2>${p.title}</h2>
@@ -1365,6 +1369,35 @@ document.getElementById("yr").textContent = new Date().getFullYear();
         });
       });
       gate.querySelector("input").focus();
+    });
+  });
+})();
+
+/* ============================================================
+   LIKE / LOVE — one reaction per gizmo per browser, switchable.
+   Collected to the same list as every other door: type, gizmo
+   label, date, and the signup email when the browser has one.
+   ============================================================ */
+(function(){
+  const getEmail = () => { try { return localStorage.getItem("pp-mail-addr") || ""; } catch(e){ return ""; } };
+  const getMark = (cat) => { try { return localStorage.getItem("pp-fb-" + cat) || ""; } catch(e){ return ""; } };
+  const setMark = (cat, v) => { try { localStorage.setItem("pp-fb-" + cat, v); } catch(e){} };
+
+  const buttons = document.querySelectorAll(".fb");
+  buttons.forEach(btn => {
+    if (getMark(btn.dataset.cat) === btn.dataset.fb) btn.classList.add("on");
+    btn.addEventListener("click", () => {
+      const cat = btn.dataset.cat, kind = btn.dataset.fb;
+      if (getMark(cat) === kind) return; // already said so
+      setMark(cat, kind);
+      document.querySelectorAll(`.fb[data-cat="${cat}"]`).forEach(b =>
+        b.classList.toggle("on", b.dataset.fb === kind));
+      const data = new FormData();
+      data.append("type", kind);
+      data.append("gizmo", cat);
+      data.append("email", getEmail());
+      data.append("date", new Date().toISOString().slice(0, 10));
+      if (FORM_ENDPOINT) fetch(FORM_ENDPOINT, { method: "POST", body: data, headers: { Accept: "application/json" } }).catch(() => {});
     });
   });
 })();
