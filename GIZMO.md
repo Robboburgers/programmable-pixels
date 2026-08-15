@@ -130,6 +130,9 @@ type, ticks the graph, and appends history. It has no opinion on appearance
 and no networking. Connection between readers is a gizmo, not a reader
 feature. The reader sandboxes gizmo bodies and caps API spend.
 
+The site is a reader plus a catalogue; a studio is whatever you use to
+fill one.
+
 ## The skills
 
 `/gizmo` makes. Give it a folder; it runs the next missing step: dictate,

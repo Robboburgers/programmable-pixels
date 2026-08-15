@@ -1,10 +1,4 @@
-# PROGRAMMABLE PIXELS
+# Programmable Pixels
 
-One feed, one operator. Games, animations, music and live code —
-every piece a permanently numbered catalogue entry (PP-001, PP-002, ... in hex).
-
-- `index.html` — the entire site. Static, no build step.
-- Publishing = appending one object to the `POSTS` array.
-- See `CLAUDE.md` for catalogue rules and conventions.
-
-PP-001 is the site itself.
+A reader plus a catalogue of gizmos — live, wirable, free to clone.
+Why: [the manifesto](manifesto.md). What: [GIZMO.md](GIZMO.md). Reading it by machine: [api.md](api.md).

@@ -128,6 +128,7 @@ tags        []</code></pre>
 <p>A Container is a gizmo whose body is a graph: it instantiates other gizmos by id, wires them, and exposes some of their ports as its own. A patch serialised is a Container waiting to be named. Its DNA lineage lists every gizmo inside it.</p>
 <h2>The reader</h2>
 <p>The reader watches a folder, loads every <code>.gizmo.json</code>, resolves wires by type, ticks the graph, and appends history. It has no opinion on appearance and no networking. Connection between readers is a gizmo, not a reader feature. The reader sandboxes gizmo bodies and caps API spend.</p>
+<p>The site is a reader plus a catalogue; a studio is whatever you use to fill one.</p>
 <h2>The skills</h2>
 <p><code>/gizmo</code> makes. Give it a folder; it runs the next missing step: dictate, triage, goal, build, verdict. Resumable, because the folder is the state. <code>/publish</code> freezes. Takes a finished gizmo and an operator-chosen label, bakes the ice into the catalogue, and offers the liquid for download. <code>/gizmo</code> never labels. <code>/publish</code> never edits.</p>
 <p>There are three ways to make a gizmo. The human way: images, dictation, taste triage, a because in your own words. The Claude way: /breed reads the folder and makes children from what is there. The quick way: a person hands Claude an image and a sentence and Claude drafts the why itself, marked as drafted. All three end in the same folder and the same file.</p>
