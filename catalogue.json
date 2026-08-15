@@ -1,8 +1,680 @@
 {
  "note": "Programmable Pixels catalogue — every published gizmo, DNA and ports. Series: five hex digits from PP-00001; catalogue v0 (PP-001..PP-017) is closed.",
  "generated": "2026-08-15",
- "count": 167,
+ "count": 172,
  "gizmos": [
+  {
+   "label": "PP-000AC",
+   "name": "Steps",
+   "title": "Steps",
+   "date": "2026-08-15",
+   "class": "Driver",
+   "ports": {
+    "in": [
+     {
+      "name": "mod",
+      "type": "float"
+     },
+     {
+      "name": "gate",
+      "type": "trigger"
+     }
+    ],
+    "out": [
+     {
+      "name": "note",
+      "type": "float"
+     },
+     {
+      "name": "trig",
+      "type": "trigger"
+     },
+     {
+      "name": "step",
+      "type": "float"
+     }
+    ]
+   },
+   "params": {
+    "steps": {
+     "value": 8,
+     "min": 2,
+     "max": 16,
+     "step": 1
+    },
+    "tempo": {
+     "value": 132,
+     "min": 40,
+     "max": 300,
+     "step": 1
+    },
+    "root": {
+     "value": 57,
+     "min": 36,
+     "max": 72,
+     "step": 1
+    },
+    "mod": {
+     "value": 0.3,
+     "min": 0,
+     "max": 1,
+     "step": 0.01
+    }
+   },
+   "body": {
+    "code": "function evalSteps(params, inputs, t) {\n  /* why: a numpty sequencer any signal can play - words and images\n     drive the melody, the melody drives a voice. */\n  var stepsN = Math.max(2, Math.round(params.steps));\n  var pos = t * params.tempo / 3600;\n  var prev = (t - 1) * params.tempo / 3600;\n  var idx = Math.floor(pos) % stepsN;\n  var scale = [0, 3, 5, 7, 10];\n  var k = idx * 3 + Math.floor(params.mod * 12);\n  var note = params.root + scale[k % scale.length] + 12 * (Math.floor(k / scale.length) % 2);\n  var trig = (t <= 0 || Math.floor(pos) !== Math.floor(prev)) ? 1 : 0;\n  return { note: note, trig: trig, step: idx };\n}"
+   },
+   "dna": {
+    "id": "sha256:3a61f6d5e34a32be270dca5cf30badc1251ecab5585748db74085bf0592547d2",
+    "label": "PP-000AC",
+    "author": "robbo",
+    "version": 1,
+    "gizmo_md": 1,
+    "why": {
+     "verbs": [
+      "sequence",
+      "drive",
+      "play"
+     ],
+     "nouns": [
+      "note",
+      "step",
+      "melody"
+     ],
+     "kills": [
+      "screensaver"
+     ],
+     "because": "A numpty midi synth would be a nice gizmo - or a synth and a separate sequencer - so images and words could drive the sequencer - drive the synth."
+    },
+    "source": "operator dictation, 15 August 2026",
+    "lineage": [],
+    "chemistry": [
+     "Prose",
+     "Glyph",
+     "Pulse"
+    ],
+    "history": [
+     {
+      "id": "sha256:c44a1033aa1389ba25a1532ceab422898c43e78adf9341f5be15b59f6dee661c",
+      "patch": "PP-000A7.rhythm -> PP-000AC.mod",
+      "when": "2026-08-15"
+     }
+    ],
+    "apis": [],
+    "tags": [
+     "driver",
+     "sequencer",
+     "note",
+     "melody",
+     "pentatonic"
+    ]
+   },
+   "folder": "gizmos/steps/",
+   "chain": {
+    "reverse": true,
+    "to": "PP-000A7",
+    "toPort": "rhythm",
+    "fromPort": "mod",
+    "type": "float"
+   }
+  },
+  {
+   "label": "PP-000AB",
+   "name": "Glyph",
+   "title": "Glyph",
+   "date": "2026-08-15",
+   "class": "Transform",
+   "ports": {
+    "in": [
+     {
+      "name": "field",
+      "type": "field"
+     }
+    ],
+    "out": [
+     {
+      "name": "text",
+      "type": "words"
+     },
+     {
+      "name": "ink",
+      "type": "float"
+     }
+    ]
+   },
+   "params": {
+    "cols": {
+     "value": 48,
+     "min": 16,
+     "max": 96,
+     "step": 1
+    },
+    "rows": {
+     "value": 24,
+     "min": 8,
+     "max": 48,
+     "step": 1
+    },
+    "gamma": {
+     "value": 1,
+     "min": 0.3,
+     "max": 3,
+     "step": 0.05
+    }
+   },
+   "body": {
+    "code": "function evalGlyph(params, inputs, t) {\n  /* why: Make a gizmo that makes text from an image. The melt in\n     miniature - an image becomes the characters for it. */\n  var f = inputs.field;\n  var ramp = \" .:-=+*#%@\";\n  var cols = Math.round(params.cols), rows = Math.round(params.rows);\n  var text = \"\", ink = 0, n = 0;\n  if (!f) return { text: \"\", ink: 0 };\n  for (var j = 0; j < rows; j++) {\n    for (var i = 0; i < cols; i++) {\n      var v = f((i + 0.5) / cols, (j + 0.5) / rows);\n      v = v < 0 ? 0 : v > 1 ? 1 : v;\n      v = Math.pow(v, params.gamma);\n      ink += v; n += 1;\n      text += ramp.charAt(Math.min(ramp.length - 1, Math.floor(v * ramp.length)));\n    }\n    text += \"\\n\";\n  }\n  return { text: text, ink: n ? ink / n : 0 };\n}"
+   },
+   "dna": {
+    "id": "sha256:87c4515da760563f431983e28e93aeb8659b54a116cee8595a93bcb145b0229c",
+    "label": "PP-000AB",
+    "author": "robbo",
+    "version": 1,
+    "gizmo_md": 1,
+    "why": {
+     "verbs": [
+      "melt",
+      "trace",
+      "describe"
+     ],
+     "nouns": [
+      "image",
+      "text",
+      "glyph"
+     ],
+     "kills": [
+      "screensaver"
+     ],
+     "because": "Make a gizmo that makes text from an image."
+    },
+    "source": "operator dictation, 15 August 2026",
+    "lineage": [],
+    "chemistry": [
+     "Prose",
+     "DomainWarp",
+     "PlasmaField"
+    ],
+    "history": [
+     {
+      "id": "sha256:17392b4ea91fa8697a0305cd75d921f5f27c2e8aeb00359f3f642dc46ee9890c",
+      "patch": "PP-00002.field -> PP-000AB.field",
+      "when": "2026-08-15"
+     }
+    ],
+    "apis": [],
+    "tags": [
+     "transform",
+     "melt",
+     "ascii",
+     "words",
+     "image-to-text"
+    ]
+   },
+   "folder": "gizmos/glyph/",
+   "chain": {
+    "reverse": true,
+    "to": "PP-00002",
+    "toPort": "field",
+    "fromPort": "field",
+    "type": "field"
+   }
+  },
+  {
+   "label": "PP-000AA",
+   "name": "Prose",
+   "title": "Friday",
+   "date": "2026-08-15",
+   "class": "Transform",
+   "ports": {
+    "in": [
+     {
+      "name": "text",
+      "type": "words"
+     },
+     {
+      "name": "loop",
+      "type": "trigger"
+     }
+    ],
+    "out": [
+     {
+      "name": "length",
+      "type": "float"
+     },
+     {
+      "name": "words",
+      "type": "float"
+     },
+     {
+      "name": "sentences",
+      "type": "float"
+     },
+     {
+      "name": "paragraphs",
+      "type": "float"
+     },
+     {
+      "name": "density",
+      "type": "field"
+     },
+     {
+      "name": "progress",
+      "type": "float"
+     },
+     {
+      "name": "char",
+      "type": "float"
+     },
+     {
+      "name": "letter",
+      "type": "trigger"
+     },
+     {
+      "name": "vowel",
+      "type": "trigger"
+     },
+     {
+      "name": "space",
+      "type": "trigger"
+     },
+     {
+      "name": "sentence",
+      "type": "trigger"
+     },
+     {
+      "name": "paragraph",
+      "type": "trigger"
+     },
+     {
+      "name": "syllable",
+      "type": "trigger"
+     },
+     {
+      "name": "wordlen",
+      "type": "float"
+     },
+     {
+      "name": "sentlen",
+      "type": "float"
+     },
+     {
+      "name": "rhythm",
+      "type": "float"
+     },
+     {
+      "name": "current",
+      "type": "words"
+     },
+     {
+      "name": "line",
+      "type": "words"
+     }
+    ]
+   },
+   "params": {
+    "rate": {
+     "value": 12,
+     "min": 1,
+     "max": 60,
+     "step": 1
+    }
+   },
+   "body": {
+    "code": "function evalProse(params, inputs, t) {\n  /* why: it gives no meaning, it just extracts working values you can\n     drive other stuff with, from whatever the characters are. */\n  var text = String(inputs.text || \"\");\n  var rate = params.rate; /* characters per second; the reader ticks at 60/s */\n  var n = text.length;\n  var Z = { length: 0, words: 0, sentences: 0, paragraphs: 0,\n    density: function () { return 0; },\n    progress: 0, char: 0, letter: 0, vowel: 0, space: 0, sentence: 0,\n    paragraph: 0, syllable: 0, wordlen: 0, sentlen: 0, rhythm: 0,\n    current: \"\", line: \"\" };\n  if (!n) return Z;\n\n  var isSpace = function (c) { return c === \" \" || c === \"\\t\" || c === \"\\n\" || c === \"\\r\"; };\n  var isVowel = function (c) { return \"aeiouAEIOU\".indexOf(c) >= 0; };\n  var isLetter = function (c) { return c.toLowerCase() !== c.toUpperCase(); };\n  var isStop = function (c) { return c === \".\" || c === \"!\" || c === \"?\"; };\n\n  /* --- the whole (constant over t) --- */\n  var wordCount = 0, sentCount = 0, paraCount = 1, inWord = false;\n  for (var i = 0; i < n; i++) {\n    var c = text[i];\n    if (!isSpace(c) && !inWord) { inWord = true; wordCount++; }\n    if (isSpace(c)) inWord = false;\n    if (isStop(c) && !isStop(text[i + 1] || \"\")) sentCount++;\n    if (c === \"\\n\" && text[i + 1] === \"\\n\") paraCount++;\n  }\n  var density = function (x) {\n    var cpos = Math.floor(Math.max(0, Math.min(0.9999, x)) * n);\n    var w = Math.max(8, Math.floor(n / 64));\n    var a = Math.max(0, cpos - w), b = Math.min(n, cpos + w), ink = 0;\n    for (var j = a; j < b; j++) if (!isSpace(text[j])) ink++;\n    return b > a ? ink / (b - a) : 0;\n  };\n\n  /* --- the playhead (per tick; loops at the end) --- */\n  var pos = Math.floor(t * rate / 60) % n;\n  var prev = t > 0 ? Math.floor((t - 1) * rate / 60) % n : -1;\n  var ch = text[pos];\n\n  /* a trigger fires if the boundary was crossed since the last tick */\n  var crossed = function (test) {\n    if (prev === pos || prev < 0) return prev < 0 && test(text[pos], pos) ? 1 : 0;\n    var k = (prev + 1) % n;\n    while (true) {\n      if (test(text[k], k)) return 1;\n      if (k === pos) return 0;\n      k = (k + 1) % n;\n    }\n  };\n  var letter = crossed(function (c) { return isLetter(c); });\n  var vowel = crossed(function (c) { return isVowel(c); });\n  var space = crossed(function (c) { return isSpace(c); });\n  var sentence = crossed(function (c) { return isStop(c); });\n  var paragraph = crossed(function (c, k) { return c === \"\\n\" && text[k + 1] === \"\\n\"; });\n  var syllable = crossed(function (c, k) {\n    /* vowel-group boundary, heuristic: a vowel whose predecessor is not */\n    return isVowel(c) && !isVowel(text[k - 1] || \" \");\n  });\n\n  /* current word and its length */\n  var ws = pos; while (ws > 0 && !isSpace(text[ws - 1])) ws--;\n  var we = pos; while (we < n && !isSpace(text[we])) we++;\n  var current = text.slice(ws, we);\n\n  /* current sentence and its length in words */\n  var ss = pos; while (ss > 0 && !isStop(text[ss - 1])) ss--;\n  var se = pos; while (se < n && !isStop(text[se])) se++;\n  var line = text.slice(ss, Math.min(se + 1, n)).trim();\n  var sentlen = line.split(/\\s+/).filter(function (s) { return s; }).length;\n\n  /* rhythm: syllables per second over the last ~2s, 0..1 (8 syl/s = 1) */\n  var back = Math.min(pos, Math.floor(2 * rate));\n  var syl = 0;\n  for (var m = pos - back; m <= pos; m++) {\n    if (isVowel(text[m]) && !isVowel(text[m - 1] || \" \")) syl++;\n  }\n  var rhythm = Math.min(1, (syl / 2) / 8);\n\n  return {\n    length: n, words: wordCount, sentences: sentCount, paragraphs: paraCount,\n    density: density,\n    progress: pos / n, char: text.charCodeAt(pos),\n    letter: letter, vowel: vowel, space: space, sentence: sentence,\n    paragraph: paragraph, syllable: syllable,\n    wordlen: current.length, sentlen: sentlen, rhythm: rhythm,\n    current: current, line: line\n  };\n}"
+   },
+   "dna": {
+    "id": "sha256:c44a1033aa1389ba25a1532ceab422898c43e78adf9341f5be15b59f6dee661c",
+    "author": "robbo",
+    "version": 1,
+    "gizmo_md": 1,
+    "why": {
+     "verbs": [
+      "drive",
+      "sequence",
+      "perform"
+     ],
+     "nouns": [
+      "playhead",
+      "text"
+     ],
+     "kills": [],
+     "because": "it gives no meaning, it just extracts working values you can drive other stuff with, from whatever the characters are."
+    },
+    "source": "brief-prose.md (Studio Claude draft of operator dictation) — because pending operator triage",
+    "lineage": [],
+    "chemistry": [
+     "Belt Ambient 01",
+     "Dustfield",
+     "any Generator with a reseed trigger"
+    ],
+    "history": [
+     {
+      "id": "sha256:f7017fd5b5d615789ba35a45189d731557a7d4f16e443b4b872502d9280958c7",
+      "patch": "PP-000A7.rhythm -> PP-00001.warp",
+      "when": "2026-08-15"
+     }
+    ],
+    "apis": [],
+    "tags": [
+     "transform",
+     "words",
+     "playhead",
+     "signals"
+    ],
+    "label": "PP-000A7"
+   },
+   "folder": "gizmos/prose/",
+   "instance_of": "PP-000A7",
+   "chain": {
+    "fromPort": "rhythm",
+    "to": "PP-00004",
+    "toPort": "speed"
+   }
+  },
+  {
+   "label": "PP-000A9",
+   "name": "Prose",
+   "title": "The Discovery",
+   "date": "2026-08-15",
+   "class": "Transform",
+   "ports": {
+    "in": [
+     {
+      "name": "text",
+      "type": "words"
+     },
+     {
+      "name": "loop",
+      "type": "trigger"
+     }
+    ],
+    "out": [
+     {
+      "name": "length",
+      "type": "float"
+     },
+     {
+      "name": "words",
+      "type": "float"
+     },
+     {
+      "name": "sentences",
+      "type": "float"
+     },
+     {
+      "name": "paragraphs",
+      "type": "float"
+     },
+     {
+      "name": "density",
+      "type": "field"
+     },
+     {
+      "name": "progress",
+      "type": "float"
+     },
+     {
+      "name": "char",
+      "type": "float"
+     },
+     {
+      "name": "letter",
+      "type": "trigger"
+     },
+     {
+      "name": "vowel",
+      "type": "trigger"
+     },
+     {
+      "name": "space",
+      "type": "trigger"
+     },
+     {
+      "name": "sentence",
+      "type": "trigger"
+     },
+     {
+      "name": "paragraph",
+      "type": "trigger"
+     },
+     {
+      "name": "syllable",
+      "type": "trigger"
+     },
+     {
+      "name": "wordlen",
+      "type": "float"
+     },
+     {
+      "name": "sentlen",
+      "type": "float"
+     },
+     {
+      "name": "rhythm",
+      "type": "float"
+     },
+     {
+      "name": "current",
+      "type": "words"
+     },
+     {
+      "name": "line",
+      "type": "words"
+     }
+    ]
+   },
+   "params": {
+    "rate": {
+     "value": 12,
+     "min": 1,
+     "max": 60,
+     "step": 1
+    }
+   },
+   "body": {
+    "code": "function evalProse(params, inputs, t) {\n  /* why: it gives no meaning, it just extracts working values you can\n     drive other stuff with, from whatever the characters are. */\n  var text = String(inputs.text || \"\");\n  var rate = params.rate; /* characters per second; the reader ticks at 60/s */\n  var n = text.length;\n  var Z = { length: 0, words: 0, sentences: 0, paragraphs: 0,\n    density: function () { return 0; },\n    progress: 0, char: 0, letter: 0, vowel: 0, space: 0, sentence: 0,\n    paragraph: 0, syllable: 0, wordlen: 0, sentlen: 0, rhythm: 0,\n    current: \"\", line: \"\" };\n  if (!n) return Z;\n\n  var isSpace = function (c) { return c === \" \" || c === \"\\t\" || c === \"\\n\" || c === \"\\r\"; };\n  var isVowel = function (c) { return \"aeiouAEIOU\".indexOf(c) >= 0; };\n  var isLetter = function (c) { return c.toLowerCase() !== c.toUpperCase(); };\n  var isStop = function (c) { return c === \".\" || c === \"!\" || c === \"?\"; };\n\n  /* --- the whole (constant over t) --- */\n  var wordCount = 0, sentCount = 0, paraCount = 1, inWord = false;\n  for (var i = 0; i < n; i++) {\n    var c = text[i];\n    if (!isSpace(c) && !inWord) { inWord = true; wordCount++; }\n    if (isSpace(c)) inWord = false;\n    if (isStop(c) && !isStop(text[i + 1] || \"\")) sentCount++;\n    if (c === \"\\n\" && text[i + 1] === \"\\n\") paraCount++;\n  }\n  var density = function (x) {\n    var cpos = Math.floor(Math.max(0, Math.min(0.9999, x)) * n);\n    var w = Math.max(8, Math.floor(n / 64));\n    var a = Math.max(0, cpos - w), b = Math.min(n, cpos + w), ink = 0;\n    for (var j = a; j < b; j++) if (!isSpace(text[j])) ink++;\n    return b > a ? ink / (b - a) : 0;\n  };\n\n  /* --- the playhead (per tick; loops at the end) --- */\n  var pos = Math.floor(t * rate / 60) % n;\n  var prev = t > 0 ? Math.floor((t - 1) * rate / 60) % n : -1;\n  var ch = text[pos];\n\n  /* a trigger fires if the boundary was crossed since the last tick */\n  var crossed = function (test) {\n    if (prev === pos || prev < 0) return prev < 0 && test(text[pos], pos) ? 1 : 0;\n    var k = (prev + 1) % n;\n    while (true) {\n      if (test(text[k], k)) return 1;\n      if (k === pos) return 0;\n      k = (k + 1) % n;\n    }\n  };\n  var letter = crossed(function (c) { return isLetter(c); });\n  var vowel = crossed(function (c) { return isVowel(c); });\n  var space = crossed(function (c) { return isSpace(c); });\n  var sentence = crossed(function (c) { return isStop(c); });\n  var paragraph = crossed(function (c, k) { return c === \"\\n\" && text[k + 1] === \"\\n\"; });\n  var syllable = crossed(function (c, k) {\n    /* vowel-group boundary, heuristic: a vowel whose predecessor is not */\n    return isVowel(c) && !isVowel(text[k - 1] || \" \");\n  });\n\n  /* current word and its length */\n  var ws = pos; while (ws > 0 && !isSpace(text[ws - 1])) ws--;\n  var we = pos; while (we < n && !isSpace(text[we])) we++;\n  var current = text.slice(ws, we);\n\n  /* current sentence and its length in words */\n  var ss = pos; while (ss > 0 && !isStop(text[ss - 1])) ss--;\n  var se = pos; while (se < n && !isStop(text[se])) se++;\n  var line = text.slice(ss, Math.min(se + 1, n)).trim();\n  var sentlen = line.split(/\\s+/).filter(function (s) { return s; }).length;\n\n  /* rhythm: syllables per second over the last ~2s, 0..1 (8 syl/s = 1) */\n  var back = Math.min(pos, Math.floor(2 * rate));\n  var syl = 0;\n  for (var m = pos - back; m <= pos; m++) {\n    if (isVowel(text[m]) && !isVowel(text[m - 1] || \" \")) syl++;\n  }\n  var rhythm = Math.min(1, (syl / 2) / 8);\n\n  return {\n    length: n, words: wordCount, sentences: sentCount, paragraphs: paraCount,\n    density: density,\n    progress: pos / n, char: text.charCodeAt(pos),\n    letter: letter, vowel: vowel, space: space, sentence: sentence,\n    paragraph: paragraph, syllable: syllable,\n    wordlen: current.length, sentlen: sentlen, rhythm: rhythm,\n    current: current, line: line\n  };\n}"
+   },
+   "dna": {
+    "id": "sha256:c44a1033aa1389ba25a1532ceab422898c43e78adf9341f5be15b59f6dee661c",
+    "author": "robbo",
+    "version": 1,
+    "gizmo_md": 1,
+    "why": {
+     "verbs": [
+      "drive",
+      "sequence",
+      "perform"
+     ],
+     "nouns": [
+      "playhead",
+      "text"
+     ],
+     "kills": [],
+     "because": "it gives no meaning, it just extracts working values you can drive other stuff with, from whatever the characters are."
+    },
+    "source": "brief-prose.md (Studio Claude draft of operator dictation) — because pending operator triage",
+    "lineage": [],
+    "chemistry": [
+     "Belt Ambient 01",
+     "Dustfield",
+     "any Generator with a reseed trigger"
+    ],
+    "history": [
+     {
+      "id": "sha256:f7017fd5b5d615789ba35a45189d731557a7d4f16e443b4b872502d9280958c7",
+      "patch": "PP-000A7.rhythm -> PP-00001.warp",
+      "when": "2026-08-15"
+     }
+    ],
+    "apis": [],
+    "tags": [
+     "transform",
+     "words",
+     "playhead",
+     "signals"
+    ],
+    "label": "PP-000A7"
+   },
+   "folder": "gizmos/prose/",
+   "instance_of": "PP-000A7",
+   "chain": {
+    "fromPort": "rhythm",
+    "to": "PP-00002",
+    "toPort": "speed"
+   }
+  },
+  {
+   "label": "PP-000A8",
+   "name": "Prose",
+   "title": "The Morning Without",
+   "date": "2026-08-15",
+   "class": "Transform",
+   "ports": {
+    "in": [
+     {
+      "name": "text",
+      "type": "words"
+     },
+     {
+      "name": "loop",
+      "type": "trigger"
+     }
+    ],
+    "out": [
+     {
+      "name": "length",
+      "type": "float"
+     },
+     {
+      "name": "words",
+      "type": "float"
+     },
+     {
+      "name": "sentences",
+      "type": "float"
+     },
+     {
+      "name": "paragraphs",
+      "type": "float"
+     },
+     {
+      "name": "density",
+      "type": "field"
+     },
+     {
+      "name": "progress",
+      "type": "float"
+     },
+     {
+      "name": "char",
+      "type": "float"
+     },
+     {
+      "name": "letter",
+      "type": "trigger"
+     },
+     {
+      "name": "vowel",
+      "type": "trigger"
+     },
+     {
+      "name": "space",
+      "type": "trigger"
+     },
+     {
+      "name": "sentence",
+      "type": "trigger"
+     },
+     {
+      "name": "paragraph",
+      "type": "trigger"
+     },
+     {
+      "name": "syllable",
+      "type": "trigger"
+     },
+     {
+      "name": "wordlen",
+      "type": "float"
+     },
+     {
+      "name": "sentlen",
+      "type": "float"
+     },
+     {
+      "name": "rhythm",
+      "type": "float"
+     },
+     {
+      "name": "current",
+      "type": "words"
+     },
+     {
+      "name": "line",
+      "type": "words"
+     }
+    ]
+   },
+   "params": {
+    "rate": {
+     "value": 12,
+     "min": 1,
+     "max": 60,
+     "step": 1
+    }
+   },
+   "body": {
+    "code": "function evalProse(params, inputs, t) {\n  /* why: it gives no meaning, it just extracts working values you can\n     drive other stuff with, from whatever the characters are. */\n  var text = String(inputs.text || \"\");\n  var rate = params.rate; /* characters per second; the reader ticks at 60/s */\n  var n = text.length;\n  var Z = { length: 0, words: 0, sentences: 0, paragraphs: 0,\n    density: function () { return 0; },\n    progress: 0, char: 0, letter: 0, vowel: 0, space: 0, sentence: 0,\n    paragraph: 0, syllable: 0, wordlen: 0, sentlen: 0, rhythm: 0,\n    current: \"\", line: \"\" };\n  if (!n) return Z;\n\n  var isSpace = function (c) { return c === \" \" || c === \"\\t\" || c === \"\\n\" || c === \"\\r\"; };\n  var isVowel = function (c) { return \"aeiouAEIOU\".indexOf(c) >= 0; };\n  var isLetter = function (c) { return c.toLowerCase() !== c.toUpperCase(); };\n  var isStop = function (c) { return c === \".\" || c === \"!\" || c === \"?\"; };\n\n  /* --- the whole (constant over t) --- */\n  var wordCount = 0, sentCount = 0, paraCount = 1, inWord = false;\n  for (var i = 0; i < n; i++) {\n    var c = text[i];\n    if (!isSpace(c) && !inWord) { inWord = true; wordCount++; }\n    if (isSpace(c)) inWord = false;\n    if (isStop(c) && !isStop(text[i + 1] || \"\")) sentCount++;\n    if (c === \"\\n\" && text[i + 1] === \"\\n\") paraCount++;\n  }\n  var density = function (x) {\n    var cpos = Math.floor(Math.max(0, Math.min(0.9999, x)) * n);\n    var w = Math.max(8, Math.floor(n / 64));\n    var a = Math.max(0, cpos - w), b = Math.min(n, cpos + w), ink = 0;\n    for (var j = a; j < b; j++) if (!isSpace(text[j])) ink++;\n    return b > a ? ink / (b - a) : 0;\n  };\n\n  /* --- the playhead (per tick; loops at the end) --- */\n  var pos = Math.floor(t * rate / 60) % n;\n  var prev = t > 0 ? Math.floor((t - 1) * rate / 60) % n : -1;\n  var ch = text[pos];\n\n  /* a trigger fires if the boundary was crossed since the last tick */\n  var crossed = function (test) {\n    if (prev === pos || prev < 0) return prev < 0 && test(text[pos], pos) ? 1 : 0;\n    var k = (prev + 1) % n;\n    while (true) {\n      if (test(text[k], k)) return 1;\n      if (k === pos) return 0;\n      k = (k + 1) % n;\n    }\n  };\n  var letter = crossed(function (c) { return isLetter(c); });\n  var vowel = crossed(function (c) { return isVowel(c); });\n  var space = crossed(function (c) { return isSpace(c); });\n  var sentence = crossed(function (c) { return isStop(c); });\n  var paragraph = crossed(function (c, k) { return c === \"\\n\" && text[k + 1] === \"\\n\"; });\n  var syllable = crossed(function (c, k) {\n    /* vowel-group boundary, heuristic: a vowel whose predecessor is not */\n    return isVowel(c) && !isVowel(text[k - 1] || \" \");\n  });\n\n  /* current word and its length */\n  var ws = pos; while (ws > 0 && !isSpace(text[ws - 1])) ws--;\n  var we = pos; while (we < n && !isSpace(text[we])) we++;\n  var current = text.slice(ws, we);\n\n  /* current sentence and its length in words */\n  var ss = pos; while (ss > 0 && !isStop(text[ss - 1])) ss--;\n  var se = pos; while (se < n && !isStop(text[se])) se++;\n  var line = text.slice(ss, Math.min(se + 1, n)).trim();\n  var sentlen = line.split(/\\s+/).filter(function (s) { return s; }).length;\n\n  /* rhythm: syllables per second over the last ~2s, 0..1 (8 syl/s = 1) */\n  var back = Math.min(pos, Math.floor(2 * rate));\n  var syl = 0;\n  for (var m = pos - back; m <= pos; m++) {\n    if (isVowel(text[m]) && !isVowel(text[m - 1] || \" \")) syl++;\n  }\n  var rhythm = Math.min(1, (syl / 2) / 8);\n\n  return {\n    length: n, words: wordCount, sentences: sentCount, paragraphs: paraCount,\n    density: density,\n    progress: pos / n, char: text.charCodeAt(pos),\n    letter: letter, vowel: vowel, space: space, sentence: sentence,\n    paragraph: paragraph, syllable: syllable,\n    wordlen: current.length, sentlen: sentlen, rhythm: rhythm,\n    current: current, line: line\n  };\n}"
+   },
+   "dna": {
+    "id": "sha256:c44a1033aa1389ba25a1532ceab422898c43e78adf9341f5be15b59f6dee661c",
+    "author": "robbo",
+    "version": 1,
+    "gizmo_md": 1,
+    "why": {
+     "verbs": [
+      "drive",
+      "sequence",
+      "perform"
+     ],
+     "nouns": [
+      "playhead",
+      "text"
+     ],
+     "kills": [],
+     "because": "it gives no meaning, it just extracts working values you can drive other stuff with, from whatever the characters are."
+    },
+    "source": "brief-prose.md (Studio Claude draft of operator dictation) — because pending operator triage",
+    "lineage": [],
+    "chemistry": [
+     "Belt Ambient 01",
+     "Dustfield",
+     "any Generator with a reseed trigger"
+    ],
+    "history": [
+     {
+      "id": "sha256:f7017fd5b5d615789ba35a45189d731557a7d4f16e443b4b872502d9280958c7",
+      "patch": "PP-000A7.rhythm -> PP-00001.warp",
+      "when": "2026-08-15"
+     }
+    ],
+    "apis": [],
+    "tags": [
+     "transform",
+     "words",
+     "playhead",
+     "signals"
+    ],
+    "label": "PP-000A7"
+   },
+   "folder": "gizmos/prose/",
+   "instance_of": "PP-000A7",
+   "chain": {
+    "fromPort": "rhythm",
+    "to": "PP-00003",
+    "toPort": "morph"
+   }
+  },
   {
    "label": "PP-000A7",
    "name": "Prose",
@@ -131,7 +803,13 @@
      "Dustfield",
      "any Generator with a reseed trigger"
     ],
-    "history": [],
+    "history": [
+     {
+      "id": "sha256:f7017fd5b5d615789ba35a45189d731557a7d4f16e443b4b872502d9280958c7",
+      "patch": "PP-000A7.rhythm -> PP-00001.warp",
+      "when": "2026-08-15"
+     }
+    ],
     "apis": [],
     "tags": [
      "transform",
@@ -141,7 +819,12 @@
     ],
     "label": "PP-000A7"
    },
-   "folder": "gizmos/prose/"
+   "folder": "gizmos/prose/",
+   "chain": {
+    "fromPort": "rhythm",
+    "to": "PP-00001",
+    "toPort": "warp"
+   }
   },
   {
    "label": "PP-000A6",
@@ -215,7 +898,12 @@
      "first-connectable"
     ]
    },
-   "folder": "gizmos/pulse/"
+   "folder": "gizmos/pulse/",
+   "chain": {
+    "fromPort": "wave",
+    "to": "PP-00001",
+    "toPort": "warp"
+   }
   },
   {
    "label": "PP-00006",

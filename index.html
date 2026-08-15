@@ -237,7 +237,11 @@ footer{
   margin-top:8px; letter-spacing:.04em; max-width:none; }
 
 /* ---- prose stage (the text is the output) ---- */
-.prose-stage{ position:absolute; inset:0; padding:20px 22px; overflow-y:auto;
+.prose-bg{ position:absolute; inset:0; width:100%; height:100%; opacity:.32; }
+.glyph-stage{ position:absolute; inset:0; margin:0; padding:14px; overflow:hidden;
+  font-family:var(--font-mono); color:#e8e8e4; white-space:pre; text-align:center;
+  letter-spacing:0; }
+.prose-stage{ position:absolute; inset:0; padding:20px 22px; overflow-y:auto; z-index:1;
   font-family:var(--font-mono); font-size:12.5px; line-height:1.9; color:#8a8a86;
   scrollbar-width:none; }
 .prose-stage::-webkit-scrollbar{ display:none; }
@@ -321,6 +325,11 @@ const FORM_ENDPOINT = ""; // e.g. https://formspree.io/f/XXXXXXXX — one list, 
 const REPO = "https://github.com/Robboburgers/programmable-pixels"; // every lane links back to the machine
 
 const POSTS = [
+  {"cat":"PP-000AC","date":"2026-08-15","type":"patch","display":"steps","title":"Steps","tags":["Gizmo","Patch","Interactive"],"def":{"name":"Steps","class":"Driver","ports":{"in":[{"name":"mod","type":"float"},{"name":"gate","type":"trigger"}],"out":[{"name":"note","type":"float"},{"name":"trig","type":"trigger"},{"name":"step","type":"float"}]},"params":{"steps":{"value":8,"min":2,"max":16,"step":1},"tempo":{"value":132,"min":40,"max":300,"step":1},"root":{"value":57,"min":36,"max":72,"step":1},"mod":{"value":0.3,"min":0,"max":1,"step":0.01}},"body":{"code":"function evalSteps(params, inputs, t) {\n  /* why: a numpty sequencer any signal can play - words and images\n     drive the melody, the melody drives a voice. */\n  var stepsN = Math.max(2, Math.round(params.steps));\n  var pos = t * params.tempo / 3600;\n  var prev = (t - 1) * params.tempo / 3600;\n  var idx = Math.floor(pos) % stepsN;\n  var scale = [0, 3, 5, 7, 10];\n  var k = idx * 3 + Math.floor(params.mod * 12);\n  var note = params.root + scale[k % scale.length] + 12 * (Math.floor(k / scale.length) % 2);\n  var trig = (t <= 0 || Math.floor(pos) !== Math.floor(prev)) ? 1 : 0;\n  return { note: note, trig: trig, step: idx };\n}"}},"src":{"def":"PP-000A7","inputs":{"text":"The pills were on the bedside table where Clarence had put them. Two generics, one glass of water, positioned at the exact angle Brad's right hand would reach without opening his eyes. Clarence had been doing this for seventeen years, and the glass had moved three centimetres to the left over that time, tracking the slow deterioration of Brad's shoulder."},"fromPort":"rhythm","toPort":"mod"},"chain":{"reverse":true,"to":"PP-000A7","toPort":"rhythm","fromPort":"mod","type":"float"},"downloads":[{"label":"steps.gizmo.json","href":"gizmos/steps/steps.gizmo.json"},{"label":"folder (zip)","href":"gizmos/steps/steps.zip"}],"dna":{"author":"robbo","tags":["driver","sequencer","note","melody","pentatonic"],"why":"A numpty sequencer any signal can play. Words drive it here: Prose walks the Clarence opening and its rhythm picks the notes — pentatonic, tempo-stepped on the reader's clock. Hit Play to hear the story; the voice is the lane's speaker for now, a square wave with a cheap envelope, exactly as numpty as ordered. Images can drive it the same way through Glyph's ink port."}},
+  {"cat":"PP-000AB","date":"2026-08-15","type":"patch","display":"glyph","title":"Glyph","tags":["Gizmo","Patch","Interactive"],"def":{"name":"Glyph","class":"Transform","ports":{"in":[{"name":"field","type":"field"}],"out":[{"name":"text","type":"words"},{"name":"ink","type":"float"}]},"params":{"cols":{"value":48,"min":16,"max":96,"step":1},"rows":{"value":24,"min":8,"max":48,"step":1},"gamma":{"value":1,"min":0.3,"max":3,"step":0.05}},"body":{"code":"function evalGlyph(params, inputs, t) {\n  /* why: Make a gizmo that makes text from an image. The melt in\n     miniature - an image becomes the characters for it. */\n  var f = inputs.field;\n  var ramp = \" .:-=+*#%@\";\n  var cols = Math.round(params.cols), rows = Math.round(params.rows);\n  var text = \"\", ink = 0, n = 0;\n  if (!f) return { text: \"\", ink: 0 };\n  for (var j = 0; j < rows; j++) {\n    for (var i = 0; i < cols; i++) {\n      var v = f((i + 0.5) / cols, (j + 0.5) / rows);\n      v = v < 0 ? 0 : v > 1 ? 1 : v;\n      v = Math.pow(v, params.gamma);\n      ink += v; n += 1;\n      text += ramp.charAt(Math.min(ramp.length - 1, Math.floor(v * ramp.length)));\n    }\n    text += \"\\n\";\n  }\n  return { text: text, ink: n ? ink / n : 0 };\n}"}},"chain":{"reverse":true,"to":"PP-00002","toPort":"field","fromPort":"field","type":"field"},"downloads":[{"label":"glyph.gizmo.json","href":"gizmos/glyph/glyph.gizmo.json"},{"label":"folder (zip)","href":"gizmos/glyph/glyph.zip"}],"dna":{"author":"robbo","tags":["transform","melt","ascii","words","image-to-text"],"why":"The other direction: an image becomes text. Glyph samples any field on a grid and maps brightness to a character ramp — here it melts Plasma Field into live type, and it ships an ink float out-port so the picture-become-words can drive things in turn. Make a gizmo that makes text from an image: this is that gizmo."}},
+  {"cat":"PP-000AA","date":"2026-08-15","type":"patch","display":"prose","title":"Friday","tags":["Gizmo","Patch","Story"],"gizmo":"prose","def":"PP-000A7","inputs":{"text":"The pills were where Brad had put them, which was not where Clarence would have put them, but they were there, and that was the system now. He swallowed them dry at 06:14.\n\nThe sync hit at 06:17.\n\nIt arrived the way it always arrived — as a kind of drowning. A thousand Fridays pressed through the pharmaceutical buffer, not the days themselves, just the silt — twelve percent of everything, which sounded small until it was twelve percent of a thousand."},"chain":{"fromPort":"rhythm","to":"PP-00004","toPort":"speed"},"downloads":[{"label":"prose.gizmo.json","href":"gizmos/prose/prose.gizmo.json"},{"label":"folder (zip)","href":"gizmos/prose/prose.zip"}],"dna":{"author":"robbo","tags":["story","prose","clarence"],"why":"Chapter six of The Clarence Problem. Same Prose liquid, different words — this one wired into Curl Noise, the flow field running behind the text at the speed of the sentences. A thousand Fridays, one wire."}},
+  {"cat":"PP-000A9","date":"2026-08-15","type":"patch","display":"prose","title":"The Discovery","tags":["Gizmo","Patch","Story"],"gizmo":"prose","def":"PP-000A7","inputs":{"text":"Brad managed the sync himself.\n\nHe'd set the pills the night before — lined up on the bedside table at the angle Clarence used, two generics, water in the mug. The alarm fired early. The suppressants caught most of it — the violet faded to a wash, the roll call arrived muffled, the thousand nights compressed into something Brad could hold without falling.\n\nEighty percent right. The missing twenty percent tasted of somebody else's toothpaste and left his left eye watering for ten minutes, but his left eye was his problem now, and he could live with it."},"chain":{"fromPort":"rhythm","to":"PP-00002","toPort":"speed"},"downloads":[{"label":"prose.gizmo.json","href":"gizmos/prose/prose.gizmo.json"},{"label":"folder (zip)","href":"gizmos/prose/prose.zip"}],"dna":{"author":"robbo","tags":["story","prose","clarence"],"why":"Chapter four of The Clarence Problem. Prose again, new words — rhythm wired into Plasma Field's speed, the demoscene sines surging behind Brad managing the sync himself. Eighty percent right."}},
+  {"cat":"PP-000A8","date":"2026-08-15","type":"patch","display":"prose","title":"The Morning Without","tags":["Gizmo","Patch","Story"],"gizmo":"prose","def":"PP-000A7","inputs":{"text":"The pills were not on the bedside table.\n\nThe sync hit at 06:17 and Brad was asleep. Without the suppressants, without Clarence timing them, without the two generics positioned at the exact angle his right hand would reach — the sync arrived unfiltered. A thousand nights of residue compressed into ninety seconds and delivered to a man who was not ready for any of them. Brad's body didn't belong to him. His hands knew the weight of things he'd never held. His legs ached from distances he hadn't walked."},"chain":{"fromPort":"rhythm","to":"PP-00003","toPort":"morph"},"downloads":[{"label":"prose.gizmo.json","href":"gizmos/prose/prose.gizmo.json"},{"label":"folder (zip)","href":"gizmos/prose/prose.zip"}],"dna":{"author":"robbo","tags":["story","prose","clarence"],"why":"Chapter three of The Clarence Problem. The same Prose gizmo, a different part of the story — its rhythm wired into Chladni's morph, the sand patterns breathing with the sentences behind the text. Change the words and the picture changes: that is what the ports are for."}},
   {"cat":"PP-000A7","date":"2026-08-15","type":"patch","title":"Prose","display":"prose","tags":["Gizmo","Patch","Interactive"],"def":{"name":"Prose","class":"Transform","ports":{"in":[{"name":"text","type":"words"},{"name":"loop","type":"trigger"}],"out":[{"name":"length","type":"float"},{"name":"words","type":"float"},{"name":"sentences","type":"float"},{"name":"paragraphs","type":"float"},{"name":"density","type":"field"},{"name":"progress","type":"float"},{"name":"char","type":"float"},{"name":"letter","type":"trigger"},{"name":"vowel","type":"trigger"},{"name":"space","type":"trigger"},{"name":"sentence","type":"trigger"},{"name":"paragraph","type":"trigger"},{"name":"syllable","type":"trigger"},{"name":"wordlen","type":"float"},{"name":"sentlen","type":"float"},{"name":"rhythm","type":"float"},{"name":"current","type":"words"},{"name":"line","type":"words"}]},"params":{"rate":{"value":12,"min":1,"max":60,"step":1}},"body":{"code":"function evalProse(params, inputs, t) {\n  /* why: it gives no meaning, it just extracts working values you can\n     drive other stuff with, from whatever the characters are. */\n  var text = String(inputs.text || \"\");\n  var rate = params.rate; /* characters per second; the reader ticks at 60/s */\n  var n = text.length;\n  var Z = { length: 0, words: 0, sentences: 0, paragraphs: 0,\n    density: function () { return 0; },\n    progress: 0, char: 0, letter: 0, vowel: 0, space: 0, sentence: 0,\n    paragraph: 0, syllable: 0, wordlen: 0, sentlen: 0, rhythm: 0,\n    current: \"\", line: \"\" };\n  if (!n) return Z;\n\n  var isSpace = function (c) { return c === \" \" || c === \"\\t\" || c === \"\\n\" || c === \"\\r\"; };\n  var isVowel = function (c) { return \"aeiouAEIOU\".indexOf(c) >= 0; };\n  var isLetter = function (c) { return c.toLowerCase() !== c.toUpperCase(); };\n  var isStop = function (c) { return c === \".\" || c === \"!\" || c === \"?\"; };\n\n  /* --- the whole (constant over t) --- */\n  var wordCount = 0, sentCount = 0, paraCount = 1, inWord = false;\n  for (var i = 0; i < n; i++) {\n    var c = text[i];\n    if (!isSpace(c) && !inWord) { inWord = true; wordCount++; }\n    if (isSpace(c)) inWord = false;\n    if (isStop(c) && !isStop(text[i + 1] || \"\")) sentCount++;\n    if (c === \"\\n\" && text[i + 1] === \"\\n\") paraCount++;\n  }\n  var density = function (x) {\n    var cpos = Math.floor(Math.max(0, Math.min(0.9999, x)) * n);\n    var w = Math.max(8, Math.floor(n / 64));\n    var a = Math.max(0, cpos - w), b = Math.min(n, cpos + w), ink = 0;\n    for (var j = a; j < b; j++) if (!isSpace(text[j])) ink++;\n    return b > a ? ink / (b - a) : 0;\n  };\n\n  /* --- the playhead (per tick; loops at the end) --- */\n  var pos = Math.floor(t * rate / 60) % n;\n  var prev = t > 0 ? Math.floor((t - 1) * rate / 60) % n : -1;\n  var ch = text[pos];\n\n  /* a trigger fires if the boundary was crossed since the last tick */\n  var crossed = function (test) {\n    if (prev === pos || prev < 0) return prev < 0 && test(text[pos], pos) ? 1 : 0;\n    var k = (prev + 1) % n;\n    while (true) {\n      if (test(text[k], k)) return 1;\n      if (k === pos) return 0;\n      k = (k + 1) % n;\n    }\n  };\n  var letter = crossed(function (c) { return isLetter(c); });\n  var vowel = crossed(function (c) { return isVowel(c); });\n  var space = crossed(function (c) { return isSpace(c); });\n  var sentence = crossed(function (c) { return isStop(c); });\n  var paragraph = crossed(function (c, k) { return c === \"\\n\" && text[k + 1] === \"\\n\"; });\n  var syllable = crossed(function (c, k) {\n    /* vowel-group boundary, heuristic: a vowel whose predecessor is not */\n    return isVowel(c) && !isVowel(text[k - 1] || \" \");\n  });\n\n  /* current word and its length */\n  var ws = pos; while (ws > 0 && !isSpace(text[ws - 1])) ws--;\n  var we = pos; while (we < n && !isSpace(text[we])) we++;\n  var current = text.slice(ws, we);\n\n  /* current sentence and its length in words */\n  var ss = pos; while (ss > 0 && !isStop(text[ss - 1])) ss--;\n  var se = pos; while (se < n && !isStop(text[se])) se++;\n  var line = text.slice(ss, Math.min(se + 1, n)).trim();\n  var sentlen = line.split(/\\s+/).filter(function (s) { return s; }).length;\n\n  /* rhythm: syllables per second over the last ~2s, 0..1 (8 syl/s = 1) */\n  var back = Math.min(pos, Math.floor(2 * rate));\n  var syl = 0;\n  for (var m = pos - back; m <= pos; m++) {\n    if (isVowel(text[m]) && !isVowel(text[m - 1] || \" \")) syl++;\n  }\n  var rhythm = Math.min(1, (syl / 2) / 8);\n\n  return {\n    length: n, words: wordCount, sentences: sentCount, paragraphs: paraCount,\n    density: density,\n    progress: pos / n, char: text.charCodeAt(pos),\n    letter: letter, vowel: vowel, space: space, sentence: sentence,\n    paragraph: paragraph, syllable: syllable,\n    wordlen: current.length, sentlen: sentlen, rhythm: rhythm,\n    current: current, line: line\n  };\n}"}},"inputs":{"text":"The pills were on the bedside table where Clarence had put them. Two generics, one glass of water, positioned at the exact angle Brad's right hand would reach without opening his eyes. Clarence had been doing this for seventeen years, and the glass had moved three centimetres to the left over that time, tracking the slow deterioration of Brad's shoulder.\n\nBrad swallowed them dry, ignoring the water. He'd been ignoring the water for seventeen years too. Clarence logged it the way he logged everything — silently, completely, with an opinion he expressed through the precise temperature of the morning coffee.\n\n\"Three minutes,\" Clarence said. He stood in the kitchen alcove — a domestic robot, third-generation, his white casing gone yellow and layered with stickers Brad had put on him over the years."},"chain":{"fromPort":"rhythm","to":"PP-00001","toPort":"warp"},"downloads":[{"label":"prose.gizmo.json","href":"gizmos/prose/prose.gizmo.json"},{"label":"folder (zip)","href":"gizmos/prose/prose.zip"}],"dna":{"author":"robbo","tags":["transform","words","playhead","signals"],"why":"Any text in, signals out. Prose walks whatever you write like a playhead — boundaries, rhythm, density — and gives no meaning, just working values you can drive other stuff with. Here it walks the opening of The Clarence Problem — chapter one, The Kitchen Sync, from the Brad Powers series — at twelve characters a second, and its rhythm port drives Domain Warp's warp: Clarence's morning routine breathes the marble. The first words on the wire."}},
   { cat:"PP-000A6", date:"2026-08-15", type:"patch", title:"Pulse", tags:["Gizmo","Patch","Interactive"],
     def:{ name:"Pulse", class:"Generator",
@@ -1001,19 +1010,21 @@ const tagRow = p => `<div class="tags"><span class="cat">${p.cat}</span>${
 const R = {
   patch:(p)=>{
     const id = p.cat.toLowerCase().replace("-","");
-    const sliders = p.def.params ? Object.entries(p.def.params).map(([k,v])=>
+    const def = typeof p.def === "string" ? ((POSTS.find(q=>q.cat===p.def)||{}).def || {}) : p.def;
+    const sliders = def.params ? Object.entries(def.params).map(([k,v])=>
       `<label>${k} <input type="range" min="${v.min}" max="${v.max}" step="any" value="${v.value}" data-param="${k}"><span class="val">${(+v.value).toFixed(2)}</span></label>`
     ).join("") : "";
-    const stage = p.display === "prose"
-      ? `<div class="frame r11" id="${id}"><div class="prose-stage" id="${id}s"></div><div class="corner">${p.cat}</div></div>`
-      : `<div class="frame r11" id="${id}"><canvas id="${id}c"></canvas><div class="corner">${p.cat}</div></div>`;
-    const controls = p.display === "prose"
-      ? `<div class="prose-controls" data-cat="${p.cat}"><button type="button" class="pp-play">Play</button><button type="button" class="pp-mode">Speed read</button><span class="pp-counter"></span></div>`
-      : "";
+    let stage;
+    if (p.display === "prose") stage = `<div class="frame r11" id="${id}"><div class="prose-stage" id="${id}s"></div><div class="corner">${p.cat}</div></div>`;
+    else if (p.display === "glyph") stage = `<div class="frame r11" id="${id}"><pre class="glyph-stage" id="${id}s"></pre><div class="corner">${p.cat}</div></div>`;
+    else stage = `<div class="frame r11" id="${id}"><canvas id="${id}c"></canvas><div class="corner">${p.cat}</div></div>`;
+    let controls = "";
+    if (p.display === "prose") controls = `<div class="prose-controls" data-cat="${p.cat}"><button type="button" class="pp-play">Play</button><button type="button" class="pp-mode">Speed read</button><span class="pp-counter"></span></div>`;
+    else if (p.display === "steps") controls = `<div class="prose-controls" data-cat="${p.cat}"><button type="button" class="pp-play">Play</button><span class="pp-counter"></span></div>`;
     return `<article class="post">${tagRow(p)}<h2>${p.title}</h2>
       <div class="media">${stage}</div>
       ${controls}
-      <div class="wire-row" id="${id}w"><span class="wire">${p.cat}.${p.chain.fromPort} &rarr; ${p.chain.to}.${p.chain.toPort}</span> &middot; float</div>
+      <div class="wire-row" id="${id}w"><span class="wire">${p.chain.reverse ? `${p.chain.to}.${p.chain.toPort} &rarr; ${p.cat}.${p.chain.fromPort}` : `${p.cat}.${p.chain.fromPort} &rarr; ${p.chain.to}.${p.chain.toPort}`}</span> &middot; ${p.chain.type || "float"}</div>
       ${sliders ? `<div class="gizmo-panel" data-gizmo="${id}">${sliders}</div>` : ""}
       <div class="dl-row">${p.downloads.map(d=>`<a href="${d.href}" download>${d.label}</a>`).join("")}<a class="src-link" href="${REPO}" target="_blank" rel="noopener">source</a></div>
       ${p.dna && p.dna.why ? `<p>${p.dna.why}</p>` : ""}
@@ -1148,7 +1159,11 @@ document.getElementById("yr").textContent = new Date().getFullYear();
 
   patches.forEach(p => {
     const id = p.cat.toLowerCase().replace("-","");
+    if (typeof p.def === "string") { const b = POSTS.find(q => q.cat === p.def); p.def = b && b.def; }
+    if (!p.def) return;
     if (p.display === "prose") { proseLane(p, id); return; }
+    if (p.display === "glyph") { glyphLane(p, id); return; }
+    if (p.display === "steps") { stepsLane(p, id); return; }
     const cv = document.getElementById(id + "c");
     const wireRow = document.getElementById(id + "w");
     if (!cv) return;
@@ -1213,6 +1228,16 @@ document.getElementById("yr").textContent = new Date().getFullYear();
   /* --- the prose lane: the text is the output. The display is driven
      by the gizmo's own ports (progress, current, rhythm) through the
      reader. Play steps the counter; speed read centres each word. --- */
+  function laneVisible(el) {
+    let visible = false;
+    const obs = new IntersectionObserver(es => { es.forEach(e => { visible = e.isIntersecting; }); }, { threshold: 0.05 });
+    obs.observe(el);
+    return () => visible;
+  }
+
+  /* --- the prose lane: the text is the output, and the driven image
+     gizmo renders behind it so the plugging is seen. Driven by the
+     gizmo's own ports (progress, current, rhythm). --- */
   function proseLane(p, id) {
     const stage = document.getElementById(id + "s");
     if (!stage) return;
@@ -1223,7 +1248,22 @@ document.getElementById("yr").textContent = new Date().getFullYear();
       for (const k in p.inputs) rd.setInput("src", k, p.inputs[k]);
     } catch(e) { stage.textContent = String(e.message || e); return; }
 
-    /* reveal: words as spans, paragraphs kept, sentence-enders accented */
+    let bgV = null;
+    if (p.chain && !p.chain.reverse) {
+      const target = POSTS.find(q => q.cat === p.chain.to);
+      if (target) {
+        try {
+          rd.fromPost("dst", target);
+          rd.connect("src", p.chain.fromPort, "dst", p.chain.toPort);
+          const bg = document.createElement("canvas");
+          bg.className = "prose-bg"; bg.width = 96; bg.height = 96;
+          stage.parentElement.insertBefore(bg, stage);
+          bgV = { ctx: bg.getContext("2d"), img: null, last: -1 };
+          bgV.img = bgV.ctx.createImageData(96, 96);
+        } catch(e) { bgV = null; }
+      }
+    }
+
     const tokens = [];
     for (const m of text.matchAll(/\S+/g)) tokens.push({ word: m[0], start: m.index });
     let htmlOut = "<p>";
@@ -1236,14 +1276,12 @@ document.getElementById("yr").textContent = new Date().getFullYear();
       htmlOut += `<span class="w${stop}" data-i="${i}">${tk.word.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</span>`;
     });
     stage.innerHTML = htmlOut + "</p>";
-    const spans = stage.querySelectorAll(".w");
 
     const box = document.querySelector(`.prose-controls[data-cat="${p.cat}"]`);
     const playBtn = box && box.querySelector(".pp-play");
     const modeBtn = box && box.querySelector(".pp-mode");
     const counter = box && box.querySelector(".pp-counter");
 
-    /* sliders steer the gizmo (rate = characters per second) */
     const panel = document.querySelector(`.gizmo-panel[data-gizmo="${id}"]`);
     if (panel) panel.querySelectorAll("input[type=range]").forEach(inp => {
       inp.addEventListener("input", () => {
@@ -1271,14 +1309,16 @@ document.getElementById("yr").textContent = new Date().getFullYear();
       for (let i = 0; i < tokens.length; i++) { if (tokens[i].start <= pos) w = i; else break; }
       return w;
     }
+    const isVis = laneVisible(stage.parentElement);
 
     function render() {
+      if (!isVis()) { requestAnimationFrame(render); return; }
       const o = rd.pull("src", t);
       const pos = Math.min(text.length - 1, Math.round(o.progress * text.length));
       const wi = wordAt(pos);
       if (rsvp) {
         const el = stage.querySelector(".rsvp-word");
-        if (el && el.textContent !== tokens[wi].word) el.textContent = tokens[wi].word;
+        if (el && tokens[wi] && el.textContent !== tokens[wi].word) el.textContent = tokens[wi].word;
       } else if (wi !== lastWord) {
         const all = stage.querySelectorAll(".w");
         all.forEach((s, i) => {
@@ -1289,12 +1329,135 @@ document.getElementById("yr").textContent = new Date().getFullYear();
         if (cur && playing && cur.scrollIntoView) cur.scrollIntoView({ block: "center", behavior: "smooth" });
         lastWord = wi;
       }
+      if (bgV && bgV.last !== t) {
+        const field = rd.pull("dst", t);
+        const buf = bgV.img.data;
+        for (let py = 0; py < 96; py++) for (let px = 0; px < 96; px++) {
+          let v = field(px/96, py/96); v = v<0?0:v>1?1:v;
+          const c = (v*255)|0, i4 = (py*96+px)*4;
+          buf[i4]=c; buf[i4+1]=c; buf[i4+2]=c; buf[i4+3]=255;
+        }
+        bgV.ctx.putImageData(bgV.img, 0, 0);
+        bgV.last = t;
+      }
       if (counter) counter.textContent =
         `word ${wi + 1} / ${tokens.length} \u00b7 rhythm ${o.rhythm.toFixed(2)}`;
-      if (playing) t += 1;
+      if (playing && !reduced) t += 1;
       requestAnimationFrame(render);
     }
     render();
+  }
+
+  /* --- the glyph lane: an image gizmo melts into characters --- */
+  function glyphLane(p, id) {
+    const pre = document.getElementById(id + "s");
+    if (!pre) return;
+    const rd = Reader.createReader();
+    const target = POSTS.find(q => q.cat === p.chain.to);
+    if (!target) return;
+    try {
+      rd.fromPost("img", target);
+      rd.instantiate("glyph", p.def);
+      rd.connect("img", p.chain.toPort, "glyph", p.chain.fromPort);
+    } catch(e) { pre.textContent = String(e.message || e); return; }
+
+    function fit() {
+      const w = pre.parentElement.clientWidth || 320;
+      const h = pre.parentElement.clientHeight || w;
+      const n = rd.nodes.get("glyph").values;
+      pre.style.fontSize = Math.max(4, Math.floor((w - 28) / Math.round(n.cols) / 0.602)) + "px";
+      pre.style.lineHeight = ((h - 28) / Math.round(n.rows)) + "px";
+    }
+    const panel = document.querySelector(`.gizmo-panel[data-gizmo="${id}"]`);
+    if (panel) panel.querySelectorAll("input[type=range]").forEach(inp => {
+      inp.addEventListener("input", () => {
+        rd.setParam("glyph", inp.dataset.param, parseFloat(inp.value));
+        const s = inp.nextElementSibling; if (s) s.textContent = parseFloat(inp.value).toFixed(2);
+        fit();
+      });
+    });
+    const isVis = laneVisible(pre.parentElement);
+    let t = 0, fitted = false;
+    (function render(){
+      if (!isVis()) { requestAnimationFrame(render); return; }
+      if (!fitted) { fit(); fitted = true; }
+      if (t % 3 === 0) pre.textContent = rd.pull("glyph", t).text;
+      if (!reduced) t += 1;
+      requestAnimationFrame(render);
+    })();
+  }
+
+  /* --- the steps lane: words drive the sequencer, the sequencer
+     drives the numpty voice. Sound is the lane's Sink (WebAudio),
+     started by Play — the gizmo itself stays pure. --- */
+  function stepsLane(p, id) {
+    const cv = document.getElementById(id + "c");
+    if (!cv) return;
+    cv.width = 256; cv.height = 256;
+    const ctx2 = cv.getContext("2d");
+    const rd = Reader.createReader();
+    try {
+      const srcDef = typeof p.src.def === "string" ? (POSTS.find(q => q.cat === p.src.def) || {}).def : p.src.def;
+      rd.instantiate("srcg", srcDef);
+      for (const k in (p.src.inputs || {})) rd.setInput("srcg", k, p.src.inputs[k]);
+      rd.instantiate("seq", p.def);
+      rd.connect("srcg", p.src.fromPort, "seq", p.src.toPort);
+    } catch(e) { return; }
+
+    const panel = document.querySelector(`.gizmo-panel[data-gizmo="${id}"]`);
+    if (panel) panel.querySelectorAll("input[type=range]").forEach(inp => {
+      inp.addEventListener("input", () => {
+        rd.setParam("seq", inp.dataset.param, parseFloat(inp.value));
+        const s = inp.nextElementSibling; if (s) s.textContent = parseFloat(inp.value).toFixed(2);
+      });
+    });
+
+    const box = document.querySelector(`.prose-controls[data-cat="${p.cat}"]`);
+    const playBtn = box && box.querySelector(".pp-play");
+    const counter = box && box.querySelector(".pp-counter");
+    let audio = null, osc = null, gain = null, playing = false;
+    function startAudio() {
+      audio = new (window.AudioContext || window.webkitAudioContext)();
+      osc = audio.createOscillator(); osc.type = "square";
+      gain = audio.createGain(); gain.gain.value = 0.0001;
+      const lp = audio.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2200;
+      osc.connect(gain); gain.connect(lp); lp.connect(audio.destination);
+      osc.start();
+    }
+    if (playBtn) playBtn.addEventListener("click", () => {
+      playing = !playing;
+      playBtn.textContent = playing ? "Pause" : "Play";
+      playBtn.classList.toggle("on", playing);
+      if (playing && !audio) startAudio();
+      if (audio) (playing ? audio.resume() : audio.suspend());
+    });
+
+    const isVis = laneVisible(cv.parentElement);
+    let t = 0;
+    (function render(){
+      if (!isVis()) { requestAnimationFrame(render); return; }
+      const o = rd.pull("seq", t);
+      const stepsN = Math.max(2, Math.round(rd.nodes.get("seq").values.steps));
+      ctx2.fillStyle = "#0B0B0C"; ctx2.fillRect(0, 0, 256, 256);
+      const wd = 256 / stepsN;
+      for (let i = 0; i < stepsN; i++) {
+        const on = i === o.step;
+        ctx2.fillStyle = on ? "#ffffff" : "#2a2a2c";
+        const hgt = on ? ((o.note - 36) / 48) * 190 + 24 : 12;
+        ctx2.fillRect(i * wd + 3, 256 - hgt - 14, wd - 6, hgt);
+      }
+      if (playing && audio && o.trig) {
+        const f = 440 * Math.pow(2, (o.note - 69) / 12);
+        const now = audio.currentTime;
+        osc.frequency.setValueAtTime(f, now);
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+      }
+      if (counter) counter.textContent = `step ${o.step + 1} \u00b7 note ${Math.round(o.note)}`;
+      if (!reduced) t += 1;
+      requestAnimationFrame(render);
+    })();
   }
 })();
 

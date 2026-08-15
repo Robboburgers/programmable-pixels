@@ -1,0 +1,104 @@
+{
+  "name": "Steps",
+  "class": "Driver",
+  "ports": {
+    "in": [
+      {
+        "name": "mod",
+        "type": "float"
+      },
+      {
+        "name": "gate",
+        "type": "trigger"
+      }
+    ],
+    "out": [
+      {
+        "name": "note",
+        "type": "float"
+      },
+      {
+        "name": "trig",
+        "type": "trigger"
+      },
+      {
+        "name": "step",
+        "type": "float"
+      }
+    ]
+  },
+  "params": {
+    "steps": {
+      "value": 8,
+      "min": 2,
+      "max": 16,
+      "step": 1
+    },
+    "tempo": {
+      "value": 132,
+      "min": 40,
+      "max": 300,
+      "step": 1
+    },
+    "root": {
+      "value": 57,
+      "min": 36,
+      "max": 72,
+      "step": 1
+    },
+    "mod": {
+      "value": 0.3,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    }
+  },
+  "body": {
+    "code": "function evalSteps(params, inputs, t) {\n  /* why: a numpty sequencer any signal can play - words and images\n     drive the melody, the melody drives a voice. */\n  var stepsN = Math.max(2, Math.round(params.steps));\n  var pos = t * params.tempo / 3600;\n  var prev = (t - 1) * params.tempo / 3600;\n  var idx = Math.floor(pos) % stepsN;\n  var scale = [0, 3, 5, 7, 10];\n  var k = idx * 3 + Math.floor(params.mod * 12);\n  var note = params.root + scale[k % scale.length] + 12 * (Math.floor(k / scale.length) % 2);\n  var trig = (t <= 0 || Math.floor(pos) !== Math.floor(prev)) ? 1 : 0;\n  return { note: note, trig: trig, step: idx };\n}"
+  },
+  "dna": {
+    "id": "sha256:3a61f6d5e34a32be270dca5cf30badc1251ecab5585748db74085bf0592547d2",
+    "label": "PP-000AC",
+    "author": "robbo",
+    "version": 1,
+    "gizmo_md": 1,
+    "why": {
+      "verbs": [
+        "sequence",
+        "drive",
+        "play"
+      ],
+      "nouns": [
+        "note",
+        "step",
+        "melody"
+      ],
+      "kills": [
+        "screensaver"
+      ],
+      "because": "A numpty midi synth would be a nice gizmo - or a synth and a separate sequencer - so images and words could drive the sequencer - drive the synth."
+    },
+    "source": "operator dictation, 15 August 2026",
+    "lineage": [],
+    "chemistry": [
+      "Prose",
+      "Glyph",
+      "Pulse"
+    ],
+    "history": [
+      {
+        "id": "sha256:c44a1033aa1389ba25a1532ceab422898c43e78adf9341f5be15b59f6dee661c",
+        "patch": "PP-000A7.rhythm -> PP-000AC.mod",
+        "when": "2026-08-15"
+      }
+    ],
+    "apis": [],
+    "tags": [
+      "driver",
+      "sequencer",
+      "note",
+      "melody",
+      "pentatonic"
+    ]
+  }
+}

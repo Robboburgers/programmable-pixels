@@ -1,0 +1,90 @@
+{
+  "name": "Glyph",
+  "class": "Transform",
+  "ports": {
+    "in": [
+      {
+        "name": "field",
+        "type": "field"
+      }
+    ],
+    "out": [
+      {
+        "name": "text",
+        "type": "words"
+      },
+      {
+        "name": "ink",
+        "type": "float"
+      }
+    ]
+  },
+  "params": {
+    "cols": {
+      "value": 48,
+      "min": 16,
+      "max": 96,
+      "step": 1
+    },
+    "rows": {
+      "value": 24,
+      "min": 8,
+      "max": 48,
+      "step": 1
+    },
+    "gamma": {
+      "value": 1,
+      "min": 0.3,
+      "max": 3,
+      "step": 0.05
+    }
+  },
+  "body": {
+    "code": "function evalGlyph(params, inputs, t) {\n  /* why: Make a gizmo that makes text from an image. The melt in\n     miniature - an image becomes the characters for it. */\n  var f = inputs.field;\n  var ramp = \" .:-=+*#%@\";\n  var cols = Math.round(params.cols), rows = Math.round(params.rows);\n  var text = \"\", ink = 0, n = 0;\n  if (!f) return { text: \"\", ink: 0 };\n  for (var j = 0; j < rows; j++) {\n    for (var i = 0; i < cols; i++) {\n      var v = f((i + 0.5) / cols, (j + 0.5) / rows);\n      v = v < 0 ? 0 : v > 1 ? 1 : v;\n      v = Math.pow(v, params.gamma);\n      ink += v; n += 1;\n      text += ramp.charAt(Math.min(ramp.length - 1, Math.floor(v * ramp.length)));\n    }\n    text += \"\\n\";\n  }\n  return { text: text, ink: n ? ink / n : 0 };\n}"
+  },
+  "dna": {
+    "id": "sha256:87c4515da760563f431983e28e93aeb8659b54a116cee8595a93bcb145b0229c",
+    "label": "PP-000AB",
+    "author": "robbo",
+    "version": 1,
+    "gizmo_md": 1,
+    "why": {
+      "verbs": [
+        "melt",
+        "trace",
+        "describe"
+      ],
+      "nouns": [
+        "image",
+        "text",
+        "glyph"
+      ],
+      "kills": [
+        "screensaver"
+      ],
+      "because": "Make a gizmo that makes text from an image."
+    },
+    "source": "operator dictation, 15 August 2026",
+    "lineage": [],
+    "chemistry": [
+      "Prose",
+      "DomainWarp",
+      "PlasmaField"
+    ],
+    "history": [
+      {
+        "id": "sha256:17392b4ea91fa8697a0305cd75d921f5f27c2e8aeb00359f3f642dc46ee9890c",
+        "patch": "PP-00002.field -> PP-000AB.field",
+        "when": "2026-08-15"
+      }
+    ],
+    "apis": [],
+    "tags": [
+      "transform",
+      "melt",
+      "ascii",
+      "words",
+      "image-to-text"
+    ]
+  }
+}
